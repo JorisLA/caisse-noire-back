@@ -6,6 +6,7 @@ import datetime
 from flask import Flask, jsonify, request, g, session, make_response
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
+from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 
 # configuration
@@ -14,6 +15,9 @@ DEBUG = True
 # instantiate the app
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+from models import Player
 # enable CORS
 CORS(app)
 # enable Bcrypt for password encryption
