@@ -13,14 +13,7 @@ DEBUG = True
 
 # instantiate the app
 app = Flask(__name__)
-app.config.from_object(__name__)
-# Load default config and override config from an environment variable
-app.config.update(dict(
-    DATABASE=os.path.join(app.root_path, 'sqlite3.db'),
-    SECRET_KEY='development key',
-    USERNAME='admin',
-    PASSWORD='default',
-))
+app.config.from_object(os.environ['APP_SETTINGS'])
 # enable CORS
 CORS(app)
 # enable Bcrypt for password encryption
@@ -56,7 +49,7 @@ def token_required(f):
 
 def connect_db():
     """Connects to the specific database."""
-    rv = sqlite3.connect(app.__init__config['DATABASE'])
+    rv = sqlite3.connect(app.config['DATABASE'])
     rv.row_factory = sqlite3.Row
     return rv
 
@@ -106,5 +99,6 @@ import login.views
 import teams.views
 
 if __name__ == '__main__':
+    print(os.environ['APP_SETTINGS'])
     app.run()
 
