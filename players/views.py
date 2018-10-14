@@ -1,4 +1,4 @@
-from caisse_noire_back import *
+from app import *
 
 @app.route('/players', methods=['GET', 'POST'])
 @token_required
@@ -47,7 +47,7 @@ def all_players(*args, **kwargs):
 @token_required
 def single_player(player_uuid, *args, **kwargs):
     response_object = {'status': 'success'}
-    if request.method == 'PUT' and kwargs['current_user']['banker'] == 1::
+    if request.method == 'PUT' and kwargs['current_user']['banker'] == 1:
         post_data = request.get_json()
         db = get_db()
         db.execute(
@@ -80,7 +80,7 @@ def ping_pong():
 
 @token_required
 def remove_player(player_uuid, *args, **kwargs):
-    if request.method == 'DELETE' and kwargs['current_user']['banker'] == 1::
+    if request.method == 'DELETE' and kwargs['current_user']['banker'] == 1:
         db = get_db()
         db.execute('delete from players where uuid = ?', [player_uuid])
         db.commit()

@@ -1,4 +1,4 @@
-from caisse_noire_back import *
+from app import *
 
 @app.route('/fines', methods=['GET', 'POST'])
 @token_required
@@ -33,7 +33,7 @@ def single_fine(fine_uuid, *args, **kwargs):
             [post_data['label'], post_data['cost'], fine_uuid])
         db.commit()
         response_object['message'] = 'Fine updated!'
-    if request.method == 'DELETE' and kwargs['current_user']['banker'] == 1::
+    if request.method == 'DELETE' and kwargs['current_user']['banker'] == 1:
         remove_fine(fine_uuid)
         response_object['message'] = 'Fine removed!'
     return jsonify(response_object)

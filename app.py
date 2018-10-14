@@ -56,7 +56,7 @@ def token_required(f):
 
 def connect_db():
     """Connects to the specific database."""
-    rv = sqlite3.connect(app.config['DATABASE'])
+    rv = sqlite3.connect(app.__init__config['DATABASE'])
     rv.row_factory = sqlite3.Row
     return rv
 
@@ -99,11 +99,11 @@ def query_db(query, args=(), one=False):
     return (rv[0] if rv else None) if one else rv
 
 
-import caisse_noire_back.players.views
-import caisse_noire_back.fines.views
-import caisse_noire_back.players_fines.views
-import caisse_noire_back.login.views
-import caisse_noire_back.teams.views
+import players.views
+import fines.views
+import players_fines.views
+import login.views
+import teams.views
 
 if __name__ == '__main__':
     app.run()

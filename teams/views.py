@@ -1,4 +1,4 @@
-from caisse_noire_back import *
+from app import *
 
 @app.route('/teams', methods=['GET', 'POST'])
 def create_team():

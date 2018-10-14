@@ -1,4 +1,4 @@
-from caisse_noire_back import (
+from app import (
     app,
     request,
     get_db,

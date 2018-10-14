@@ -1,6 +1,4 @@
 # Byte-compiled / optimized / DLL files
-**/__pycache__/
-**/*/__pycache__/
-*.py[cod]
-*.egg-info/
-**/sqlite3.db
+__pycache__/
+*/__pycache__/
+sqlite3.db

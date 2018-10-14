@@ -1,4 +1,4 @@
-from caisse_noire_back import *
+from app import *
 
 @app.route('/bills', methods=['DELETE'])
 @token_required
