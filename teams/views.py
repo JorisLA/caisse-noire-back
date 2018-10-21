@@ -1,28 +1,25 @@
 from app import *
 
 @app.route('/teams', methods=['GET', 'POST'])
+@cross_origin()
 def create_team():
     if request.method == 'POST':
         post_data = request.get_json()
-        db = get_db()
-        db.execute(
-            'INSERT INTO teams (uuid, label) values (?, ?)',
-                [
-                    str(uuid.uuid4()),
-                    post_data['label'],
-                ]
+        team = Team(
+            uuid=str(uuid.uuid4()),
+            label=post_data['label']
         )
-        db.commit()
+        db.session.add(team)
+        db.session.commit()
         return '', 204
     else:
         TEAMS = []
         response_object = {}
-        for team in query_db(
-            'SELECT * FROM teams'
-        ):
+        teams = Team.query.all()
+        for team in teams:
             TEAMS.append({
-                'value': team['uuid'],
-                'text': team['label'],
+                'value': team.uuid,
+                'text': team.label,
             })
         response_object['teams'] = TEAMS
     return jsonify(response_object)
