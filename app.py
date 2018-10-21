@@ -18,7 +18,6 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
 from models import Player, Fine, Team, PlayerFines, TeamFines
 # enable CORS

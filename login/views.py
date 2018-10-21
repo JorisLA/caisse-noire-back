@@ -13,7 +13,7 @@ def signup():
             db.session.add(team)
         else:
             team_uuid = post_data['get_team']
-            team = Team.filter_by(uuid=team_uuid).first()
+            team = Team.query.filter_by(uuid=team_uuid).first()
             banker = 0
         fine = db.session.query(Fine).filter_by(label='Welcome').first()
         if not fine:
