@@ -15,14 +15,6 @@ def signup():
             team_uuid = post_data['get_team']
             team = Team.query.filter_by(uuid=team_uuid).first()
             banker = 0
-        fine = db.session.query(Fine).filter_by(label='Welcome').first()
-        if not fine:
-            fine = Fine(
-                uuid=str(uuid.uuid4()),
-                label='Welcome',
-                cost=2
-            )
-            db.session.add(fine)
         player = Player(
             uuid=str(uuid.uuid4()),
             first_name=post_data['first_name'],
@@ -33,8 +25,6 @@ def signup():
             team_uuid=team_uuid,
         )
         db.session.add(player)
-        fine.players_fines.append(player)
-        fine.teams_fines.append(team)
         db.session.commit()
     return '', 204
 

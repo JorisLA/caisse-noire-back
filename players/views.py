@@ -21,35 +21,47 @@ def all_players(*args, **kwargs):
     else:
         PLAYERS = []
         FINES = []
-
-        players = db.session.query(
-                func.sum(Fine.cost).label('total'),
-                Player.uuid,
-                Player.first_name,
-                Player.last_name
+        query = text(
+            """
+            SELECT sum(fine.cost) AS total,
+                player.uuid,
+                player.first_name,
+                player.last_name
+                    FROM player
+                    LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
+                    LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
+                    JOIN team ON player.team_uuid = team.uuid 
+                        WHERE team.uuid = :team_uuid
+                        GROUP BY player.uuid
+            """
+        )
+        players = db.engine.execute(
+            query,
+            team_uuid=kwargs['current_user'].team_uuid
+        ).fetchall() 
+        fines = db.session.query(
+            Fine.uuid,
+            Fine.label,
+            TeamFines.c.team_uuid
             ).join(
-                PlayerFines, (Fine.uuid==PlayerFines.c.fine_uuid)
-            ).join(
-                Player, (PlayerFines.c.player_uuid==Player.uuid)
-            ).join(
-                Team, (Player.team_uuid==Team.uuid)
+                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
             ).filter(
-                Team.uuid == kwargs['current_user'].team_uuid
+                TeamFines.c.team_uuid == kwargs['current_user'].team_uuid
             ).group_by(
-                Player.uuid
+                TeamFines.c.team_uuid,
+                Fine.uuid
             )
-        fines = Fine.query.all()
+        for fine in fines:
+            FINES.append({
+                'value': fine.uuid,
+                'text': fine.label
+            })
         for player in players:
             PLAYERS.append({
                 'uuid': player.uuid,
                 'first_name': player.first_name,
                 'last_name': player.last_name,
                 'total': player.total
-            })
-        for fine in fines:
-            FINES.append({
-                'value': fine.uuid,
-                'text': fine.label
             })
         response_object['players'] = PLAYERS
         response_object['fines'] = FINES

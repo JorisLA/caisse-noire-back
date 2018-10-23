@@ -6,11 +6,15 @@ from app import *
 def send_bills(*args, **kwargs):
     response_object = {'status': 'success'}
     PLAYERS = []
-    if request.method == 'DELETE' and kwargs['current_user'].banker == 1:
-        try:
-            num_rows_deleted = db.session.query(PlayerFines).delete()
-            print(num_rows_deleted)
-            db.session.commit()
-        except:
-            db.session.rollback()
-    return '', 204
+    if request.method == 'DELETE' and kwargs['current_user'].banker == 1:       
+        #player = Player.query.first()
+        #player.fines = []
+        #db.session.commit()
+        # send single recipient; single email as string
+        #mail.send_email(
+        #    from_email='joris.laruelle83@gmail.com',
+        #    to_email='joris.laruelle83@gmail.com',
+        #    subject='Subject',
+        #    text='Body'
+        #)
+        return '', 204

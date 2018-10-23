@@ -7,8 +7,10 @@ from flask import Flask, jsonify, request, g, session, make_response
 from flask_cors import CORS, cross_origin
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
+from flask_sendgrid import SendGrid
 from sqlalchemy import func
 from functools import wraps
+from sqlalchemy.sql import text
 
 # configuration
 DEBUG = True
@@ -18,10 +20,13 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SENDGRID_API_KEY'] = 'your api key'
+app.config['SENDGRID_DEFAULT_FROM'] = 'admin@yourdomain.com'
+mail = SendGrid(app)
 db = SQLAlchemy(app)
 from models import Player, Fine, Team, PlayerFines, TeamFines
 # enable CORS
-cors = CORS(app, resources={r"http://localhost:8000/*": {"origins": "*"}})
+cors = CORS(app)
 # enable Bcrypt for password encryption
 bcrypt = Bcrypt(app)
 
