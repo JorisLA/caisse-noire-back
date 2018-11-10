@@ -7,14 +7,14 @@ def signup():
         post_data = request.get_json()
         pw_hash = bcrypt.generate_password_hash(post_data['password']).decode('utf-8')
         if 'add_team' in post_data:
-            banker = 1
+            banker = True
             team_uuid = str(uuid.uuid4())
             team = Team(uuid=team_uuid, label=post_data['add_team'])
             db.session.add(team)
         else:
             team_uuid = post_data['get_team']
             team = Team.query.filter_by(uuid=team_uuid).first()
-            banker = 0
+            banker = False
         player = Player(
             uuid=str(uuid.uuid4()),
             first_name=post_data['first_name'],

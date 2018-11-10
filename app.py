@@ -8,7 +8,7 @@ from flask_cors import CORS, cross_origin
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from flask_sendgrid import SendGrid
-from sqlalchemy import func
+from sqlalchemy import func, exc
 from functools import wraps
 from sqlalchemy.sql import text
 
@@ -42,6 +42,28 @@ def token_required(f):
             return jsonify({'message' : 'Token is missing!'}), 401
 
         try: 
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+            current_user = Player.query.filter_by(uuid=data['public_id']).first()
+            kwargs['current_user'] = current_user
+        except:
+            return jsonify({'message' : 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+def is_banker(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+
+        if not token:
+            return jsonify({'message' : 'Token is missing!'}), 401
+
+        try:
             data = jwt.decode(token, app.config['SECRET_KEY'])
             current_user = Player.query.filter_by(uuid=data['public_id']).first()
             kwargs['current_user'] = current_user

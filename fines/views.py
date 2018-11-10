@@ -1,60 +1,135 @@
 from app import *
+from flask.views import MethodView
 
-@app.route('/fines', methods=['GET', 'POST'])
-@cross_origin()
-@token_required
-def all_fines(*args, **kwargs):
-    response_object = {'status': 'success'}
-    if request.method == 'POST' and kwargs['current_user'].banker == 1:
+class FineApi(MethodView):
+
+    def __init__(
+            self,
+    ):
+        self.response_object = {}
+
+    @cross_origin()
+    @token_required
+    def post(
+        self,
+        *args,
+        **kwargs
+    ):
         post_data = request.get_json()
-        fine = Fine(
-            uuid=str(uuid.uuid4()),
-            label=post_data['label'],
-            cost=post_data['cost']
-        )
-        db.session.add(fine)
-        team = Team.query.filter_by(uuid=kwargs['current_user'].team_uuid).first()
-        fine.teams_fines.append(team)
-        db.session.commit()
-        response_object['message'] = 'Fine added!'
-    else:
-        FINES = []
-        fines = db.session.query(
-            Fine.uuid,
-            Fine.label,
-            Fine.cost,
-            TeamFines.c.team_uuid
-            ).join(
-                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-            ).filter(
-                TeamFines.c.team_uuid == kwargs['current_user'].team_uuid
-            ).group_by(
-                TeamFines.c.team_uuid,
-                Fine.uuid
+
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
+
+        if not post_data:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Empty data sent in the request'}), 400
+
+        team = Team.get_team_by_uuid(team_uuid=kwargs['current_user'].team_uuid)
+        if not team:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Team not found'}), 404
+        try:
+            Fine.create_fine(
+                post_data=post_data,
+                team=team,
             )
-        for fine in fines:
-            FINES.append({
-                'uuid': fine.uuid,
-                'label': fine.label,
-                'cost': fine.cost
-            })
-        response_object['fines'] = FINES
-    return jsonify(response_object)
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
 
-@app.route('/fines/<fine_uuid>', methods=['PUT', 'DELETE'])
-@cross_origin()
-@token_required
-def single_fine(fine_uuid, *args, **kwargs):
-    response_object = {'status': 'success'}
-    if request.method == 'PUT' and kwargs['current_user'].banker == 1:
+        self.response_object['message'] = 'Fine added!'
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 201
+
+
+    @cross_origin()
+    @token_required
+    def get(
+        self,
+        *args,
+        **kwargs
+    ):
+        try:
+            self.response_object['fines'] = Fine.get_fines(
+                user_team_uuid=kwargs['current_user'].team_uuid
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        if not self.response_object['fines']:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'No fines or wrong team uuid'}), 404
+
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 200
+
+
+    @cross_origin()
+    @token_required
+    def put(
+        self,
+        fine_uuid,
+        *args,
+        **kwargs
+    ):
         post_data = request.get_json()
-        fine = Fine.query.filter_by(uuid=fine_uuid).first()
-        fine.label = post_data['label']
-        fine.cost = post_data['cost']
-        db.session.commit()
-        response_object['message'] = 'Fine updated!'
-    if request.method == 'DELETE' and kwargs['current_user'].banker == 1:
-        db.session.delete(Fine.query.filter_by(uuid=fine_uuid).first())
-        db.session.commit()
-        response_object['message'] = 'Fine removed!'
-    return jsonify(response_object)
+
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
+        
+        fine = Fine.get_fine_by_uuid(fine_uuid=fine_uuid)
+        if not fine:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Fine not found'}), 404
+
+        try:
+            Fine.update_fine(
+                post_data=post_data,
+                fine=fine,
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        self.response_object['message'] = 'Fine updated!'
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 204
+
+
+    @cross_origin()
+    @token_required
+    def delete(
+        self,
+        fine_uuid,
+        *args,
+        **kwargs
+    ):
+        post_data = request.get_json()
+
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
+
+        fine = Fine.get_fine_by_uuid(fine_uuid=fine_uuid)
+        if not fine:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Fine not found'}), 404
+
+        try:
+            Fine.delete_fine(
+                fine=fine,
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        self.response_object['message'] = 'Fine removed!'
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 204
+
+
+app.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
+app.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))
