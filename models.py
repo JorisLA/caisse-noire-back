@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import bindparam
 
-from app import db
+from app import db, text
 
 Base = declarative_base()
 
@@ -89,6 +89,145 @@ class Player(db.Model):
     def __repr__(self):
         return '<uuid {}>'.format(self.uuid)
 
+    @staticmethod
+    def get_player_by_uuid(
+        player_uuid,
+    ):
+        return Player.query.filter_by(uuid=player_uuid).first()
+
+    @staticmethod
+    def delete_player(
+        player,
+    ):
+        db.session.delete(player)
+        db.session.commit()
+
+    @staticmethod
+    def get_players(
+        team_uuid,
+        _sort,
+        _order,
+        _filter,
+        _currentPage,
+        _perPage,
+        _offset,
+    ):
+        PLAYERS = []
+        _query = """
+            SELECT sum(fine.cost) AS total,
+                player.uuid,
+                player.first_name,
+                player.last_name,
+                count(*) OVER() AS full_count
+                    FROM player
+                    LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
+                    LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
+                    JOIN team ON player.team_uuid = team.uuid
+                    WHERE team.uuid = :team_uuid
+        """
+        if _filter:
+            _query = _query + """
+                    AND (
+                        player.first_name LIKE :_filter
+                        OR player.last_name LIKE :_filter
+                    )
+                    GROUP BY player.uuid
+                """
+            query = text(_query)
+            for player in db.engine.execute(
+                query,
+                team_uuid=team_uuid,
+                _filter='%' + _filter + '%',
+            ).fetchall():
+                PLAYERS.append({
+                    'uuid': player.uuid,
+                    'first_name': player.first_name,
+                    'last_name': player.last_name,
+                    'total': player.total,
+                    'full_count': player.full_count
+                })
+            return PLAYERS
+
+        if int(_currentPage) == 1:
+            if _sort and _order:
+                _query = _query + """
+                        GROUP BY player.uuid
+                        ORDER BY {0} {1}
+                        LIMIT :_perPage
+                    """.format(_sort, _order)
+                query = text(_query)
+                for player in db.engine.execute(
+                    query,
+                    team_uuid=team_uuid,
+                    _perPage=_perPage,
+                ).fetchall():
+                    PLAYERS.append({
+                        'uuid': player.uuid,
+                        'first_name': player.first_name,
+                        'last_name': player.last_name,
+                        'total': player.total,
+                        'full_count': player.full_count
+                    })
+                return PLAYERS
+            else:
+                _query = _query + """
+                        GROUP BY player.uuid
+                        LIMIT :_perPage
+                    """
+                query = text(_query)
+                for player in db.engine.execute(
+                    query,
+                    team_uuid=team_uuid,
+                    _perPage=_perPage,
+                ).fetchall():
+                    PLAYERS.append({
+                        'uuid': player.uuid,
+                        'first_name': player.first_name,
+                        'last_name': player.last_name,
+                        'total': player.total,
+                        'full_count': player.full_count
+                    })
+                return PLAYERS
+        else:
+            if _sort and _order:
+                _query = _query + """
+                        GROUP BY player.uuid
+                        ORDER BY {0} {1}
+                        OFFSET :_offset
+                    """.format(_sort, _order)
+                query = text(_query)
+                for player in db.engine.execute(
+                    query,
+                    team_uuid=team_uuid,
+                    _offset=_offset,
+                ).fetchall():
+                    PLAYERS.append({
+                        'uuid': player.uuid,
+                        'first_name': player.first_name,
+                        'last_name': player.last_name,
+                        'total': player.total,
+                        'full_count': player.full_count
+                    })
+                return PLAYERS
+            else:
+                _query = _query + """
+                        GROUP BY player.uuid
+                        OFFSET :_offset
+                    """
+                query = text(_query)
+                for player in db.engine.execute(
+                    query,
+                    team_uuid=team_uuid,
+                    _offset=_offset,
+                ).fetchall():
+                    PLAYERS.append({
+                        'uuid': player.uuid,
+                        'first_name': player.first_name,
+                        'last_name': player.last_name,
+                        'total': player.total,
+                        'full_count': player.full_count
+                    })
+                return PLAYERS
 
 class Fine(db.Model):
     __tablename__ = 'fine'
@@ -117,26 +256,46 @@ class Fine(db.Model):
     def get_fines(
         cls,
         user_team_uuid,
+        for_player_view=False,
     ):
         FINES = []
-        for fine in db.session.query(
-            cls.uuid,
-            cls.label,
-            cls.cost,
-            TeamFines.c.team_uuid
-            ).join(
-                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-            ).filter(
-                TeamFines.c.team_uuid == user_team_uuid
-            ).group_by(
-                TeamFines.c.team_uuid,
-                cls.uuid
-            ):
-            FINES.append({
-                'uuid': fine.uuid,
-                'label': fine.label,
-                'cost': fine.cost
-            })
+        if for_player_view:
+            for fine in db.session.query(
+                cls.uuid,
+                cls.label,
+                cls.cost,
+                TeamFines.c.team_uuid
+                ).join(
+                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                ).filter(
+                    TeamFines.c.team_uuid == user_team_uuid
+                ).group_by(
+                    TeamFines.c.team_uuid,
+                    cls.uuid
+                ):
+                FINES.append({
+                    'value': fine.uuid,
+                    'text': fine.label
+                })
+        else:
+            for fine in db.session.query(
+                cls.uuid,
+                cls.label,
+                cls.cost,
+                TeamFines.c.team_uuid
+                ).join(
+                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                ).filter(
+                    TeamFines.c.team_uuid == user_team_uuid
+                ).group_by(
+                    TeamFines.c.team_uuid,
+                    cls.uuid
+                ):
+                FINES.append({
+                    'uuid': fine.uuid,
+                    'label': fine.label,
+                    'cost': fine.cost
+                })
         return FINES
 
     @staticmethod

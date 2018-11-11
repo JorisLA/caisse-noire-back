@@ -1,11 +1,20 @@
 from app import *
+from flask.views import MethodView
 
-@app.route('/players', methods=['GET', 'POST'])
-@cross_origin()
-@token_required
-def all_players(*args, **kwargs):
-    response_object = {'status': 'success'}
-    if request.method == 'POST':
+class PlayerApi(MethodView):
+
+    def __init__(
+            self,
+    ):
+        self.response_object = {}
+
+    @cross_origin()
+    @token_required
+    def post(
+        self,
+        *args,
+        **kwargs
+    ):
         post_data = request.get_json()        
         #db = get_db()
         #db.execute(
@@ -17,8 +26,18 @@ def all_players(*args, **kwargs):
         #        ]
         #)
         #db.commit()
-        response_object['message'] = 'Player added!'
-    else:
+        self.response_object['message'] = 'Player added!'
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 201
+
+
+    @cross_origin()
+    @token_required
+    def get(
+        self,
+        *args,
+        **kwargs
+    ):
         PLAYERS = []
         FINES = []
         _sort = request.args.get('_sort')
@@ -28,148 +47,99 @@ def all_players(*args, **kwargs):
         _perPage = request.args.get('_perPage')
         if _currentPage and _perPage:
             _offset = int(_perPage) * (int(_currentPage) - 1)
-        if _sort and _order:
-            query = text(
-                """
-                SELECT sum(fine.cost) AS total,
-                    player.uuid,
-                    player.first_name,
-                    player.last_name,
-                    count(*) OVER() AS full_count
-                        FROM player
-                        LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
-                        LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
-                        JOIN team ON player.team_uuid = team.uuid
-                            WHERE team.uuid = :team_uuid
-                            GROUP BY player.uuid
-                            ORDER BY {0} {1}
-                            OFFSET :_offset
-                """.format(_sort, _order)
-            )
-            players = db.engine.execute(
-                query,
-                team_uuid=kwargs['current_user'].team_uuid,
-                _offset=_offset,
-            ).fetchall()
-        elif _filter:
-            query = text(
-                """
-                SELECT sum(fine.cost) AS total,
-                    player.uuid,
-                    player.first_name,
-                    player.last_name,
-                    count(*) OVER() AS full_count
-                        FROM player
-                        LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
-                        LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
-                        JOIN team ON player.team_uuid = team.uuid
-                            WHERE team.uuid = :team_uuid
-                            AND (player.first_name LIKE :_filter OR player.last_name LIKE :_filter)
-                            GROUP BY player.uuid
-                """
-            )
-            players = db.engine.execute(
-                query,
-                team_uuid=kwargs['current_user'].team_uuid,
-                _filter='%' + _filter + '%',
-            ).fetchall()
-        elif int(_currentPage) > 1:
-            query = text(
-                """
-                SELECT sum(fine.cost) AS total,
-                    player.uuid,
-                    player.first_name,
-                    player.last_name,
-                    count(*) OVER() AS full_count
-                        FROM player
-                        LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
-                        LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
-                        JOIN team ON player.team_uuid = team.uuid
-                            WHERE team.uuid = :team_uuid
-                            GROUP BY player.uuid
-                            OFFSET :_offset
-                """
-            )
-            players = db.engine.execute(
-                query,
-                team_uuid=kwargs['current_user'].team_uuid,
-                _offset=_offset,
-            ).fetchall()
         else:
-            query = text(
-                """
-                SELECT sum(fine.cost) AS total,
-                    player.uuid,
-                    player.first_name,
-                    player.last_name,
-                    count(*) OVER() AS full_count
-                        FROM player
-                        LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
-                        LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
-                        JOIN team ON player.team_uuid = team.uuid
-                            WHERE team.uuid = :team_uuid
-                            GROUP BY player.uuid
-                            LIMIT :_perPage
-                """
-            )
-            players = db.engine.execute(
-                query,
+            _offset = 0
+
+        try:
+            self.response_object['players'] = Player.get_players(
                 team_uuid=kwargs['current_user'].team_uuid,
+                _sort=_sort,
+                _order=_order,
+                _filter=_filter,
+                _currentPage=_currentPage,
                 _perPage=_perPage,
-            ).fetchall()
-        fines = db.session.query(
-            Fine.uuid,
-            Fine.label,
-            TeamFines.c.team_uuid
-            ).join(
-                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-            ).filter(
-                TeamFines.c.team_uuid == kwargs['current_user'].team_uuid
-            ).group_by(
-                TeamFines.c.team_uuid,
-                Fine.uuid
+                _offset=_offset,
             )
-        for fine in fines:
-            FINES.append({
-                'value': fine.uuid,
-                'text': fine.label
-            })
-        for player in players:
-            PLAYERS.append({
-                'uuid': player.uuid,
-                'first_name': player.first_name,
-                'last_name': player.last_name,
-                'total': player.total,
-                'full_count': player.full_count
-            })
-        response_object['players'] = PLAYERS
-        response_object['fines'] = FINES
-    return jsonify(response_object)
+            self.response_object['fines'] = Fine.get_fines(
+                user_team_uuid=kwargs['current_user'].team_uuid,
+                for_player_view=True,
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
 
-@app.route('/players/<player_uuid>', methods=['PUT', 'DELETE'])
-@cross_origin()
-@token_required
-def single_player(player_uuid, *args, **kwargs):
-    response_object = {'status': 'success'}
-    if request.method == 'PUT' and kwargs['current_user'].banker == 1:
+        return jsonify(self.response_object), 200
+
+
+    @cross_origin()
+    @token_required
+    def put(
+        self,
+        player_uuid,
+        *args,
+        **kwargs
+    ):
         post_data = request.get_json()
-        player = Player.query.filter_by(uuid=player_uuid).first()
-        if 'fine_uuid' in post_data:
-            fine = Fine.query.filter_by(uuid=post_data['fine_uuid']).first()
-            association = PlayerFines(player_fines_id=str(uuid.uuid4()))
-            association.fine = fine
-            player.fines.append(association)
-        db.session.commit()
-        response_object['message'] = 'Player updated!'
-    if request.method == 'DELETE' and kwargs['current_user'].banker == 1:
-        db.session.delete(Player.query.filter_by(uuid=player_uuid).first())
-        db.session.commit()
-        response_object['message'] = 'Player removed!'
-    return jsonify(response_object)
 
-# sanity check route
-@app.route('/ping', methods=['GET'])
-@cross_origin()
-def ping_pong():
-    return jsonify('pong!')
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
 
+        player = Player.get_player_by_uuid(player_uuid=player_uuid)
+        if not player:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Player not found'}), 404
+
+        try:
+            if 'fine_uuid' in post_data:
+                fine = Fine.get_fine_by_uuid(fine_uuid=post_data['fine_uuid'])
+                if not fine:
+                    self.response_object['status'] = 'failure'
+                    return jsonify({'message' : 'Fine not found'}), 404
+
+                association = PlayerFines(player_fines_id=str(uuid.uuid4()))
+                association.fine = fine
+                player.fines.append(association)
+            db.session.commit()
+            self.response_object['message'] = 'Player updated!'
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 204
+
+
+    @cross_origin()
+    @token_required
+    def delete(
+        self,
+        player_uuid,
+        *args,
+        **kwargs
+    ):
+        post_data = request.get_json()
+
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
+
+        player = Player.get_player_by_uuid(player_uuid=player_uuid)
+        if not player:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Player not found'}), 404
+
+        try:
+            Player.delete_fine(
+                player=player,
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        self.response_object['message'] = 'Player removed!'
+        self.response_object['status'] = 'success'
+        return jsonify(self.response_object), 204
+
+app.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
+app.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))
