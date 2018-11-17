@@ -62,6 +62,12 @@ class PlayerApi(MethodView):
             )
             self.response_object['fines'] = Fine.get_fines(
                 user_team_uuid=kwargs['current_user'].team_uuid,
+                _sort=_sort,
+                _order=_order,
+                _filter=_filter,
+                _currentPage=_currentPage,
+                _perPage=_perPage,
+                _offset=_offset,
                 for_player_view=True,
             )
         except exc.SQLAlchemyError as error:

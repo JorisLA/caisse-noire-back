@@ -22,6 +22,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SENDGRID_API_KEY'] = 'your api key'
 app.config['SENDGRID_DEFAULT_FROM'] = 'admin@yourdomain.com'
+app.config['SQLALCHEMY_ECHO'] = True
 mail = SendGrid(app)
 db = SQLAlchemy(app)
 from models import Player, Fine, Team, PlayerFines, TeamFines
@@ -77,7 +78,8 @@ def is_banker(f):
 import players.views
 import fines.views
 import players_fines.views
-import login.views
+import signin.views
+import signup.views
 import teams.views
 
 if __name__ == '__main__':

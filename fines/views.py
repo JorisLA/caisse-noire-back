@@ -50,9 +50,25 @@ class FineApi(MethodView):
         *args,
         **kwargs
     ):
+        _sort = request.args.get('_sort')
+        _order = request.args.get('_order')
+        _filter = request.args.get('_filter')
+        _currentPage = request.args.get('_currentPage')
+        _perPage = request.args.get('_perPage')
+        if _currentPage and _perPage:
+            _offset = int(_perPage) * (int(_currentPage) - 1)
+        else:
+            _offset = 0
+
         try:
             self.response_object['fines'] = Fine.get_fines(
-                user_team_uuid=kwargs['current_user'].team_uuid
+                user_team_uuid=kwargs['current_user'].team_uuid,
+                _sort=_sort,
+                _order=_order,
+                _filter=_filter,
+                _currentPage=_currentPage,
+                _perPage=_perPage,
+                _offset=_offset,
             )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'

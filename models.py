@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import bindparam
 
-from app import db, text
+from app import db, text, func
 
 Base = declarative_base()
 
@@ -94,6 +94,12 @@ class Player(db.Model):
         player_uuid,
     ):
         return Player.query.filter_by(uuid=player_uuid).first()
+
+    @staticmethod
+    def get_player_by_email(
+        player_email,
+    ):
+        return Player.query.filter_by(email=player_email).first()
 
     @staticmethod
     def delete_player(
@@ -256,6 +262,12 @@ class Fine(db.Model):
     def get_fines(
         cls,
         user_team_uuid,
+        _sort,
+        _order,
+        _filter,
+        _currentPage,
+        _perPage,
+        _offset,
         for_player_view=False,
     ):
         FINES = []
@@ -278,25 +290,96 @@ class Fine(db.Model):
                     'text': fine.label
                 })
         else:
-            for fine in db.session.query(
-                cls.uuid,
-                cls.label,
-                cls.cost,
-                TeamFines.c.team_uuid
-                ).join(
-                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-                ).filter(
-                    TeamFines.c.team_uuid == user_team_uuid
-                ).group_by(
-                    TeamFines.c.team_uuid,
-                    cls.uuid
-                ):
-                FINES.append({
-                    'uuid': fine.uuid,
-                    'label': fine.label,
-                    'cost': fine.cost
-                })
+            if _filter:
+                fines = db.session.query(
+                    cls.uuid,
+                    cls.label,
+                    cls.cost,
+                    TeamFines.c.team_uuid
+                    ).join(
+                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                    ).filter(
+                        TeamFines.c.team_uuid == user_team_uuid,
+                        cls.label.like('%'+_filter+'%')
+                    )
+                for fine in fines:
+                    FINES.append({
+                        'uuid': fine.uuid,
+                        'label': fine.label,
+                        'cost': fine.cost,
+                    })
+            elif _sort and _order:
+                ordering = '{}{}'.format(_sort,_order)
+                fines = db.session.query(
+                    cls.uuid,
+                    cls.label,
+                    cls.cost,
+                    TeamFines.c.team_uuid
+                    ).join(
+                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                    ).filter(
+                        TeamFines.c.team_uuid == user_team_uuid
+                    ).group_by(
+                        TeamFines.c.team_uuid,
+                        cls.uuid
+                    ).order_by(
+                        cls.getOrder(cls,ordering)
+                    ).paginate(
+                        int(_currentPage),
+                        int(_perPage),
+                        False
+                    )
+                for fine in fines.items:
+                    FINES.append({
+                        'uuid': fine.uuid,
+                        'label': fine.label,
+                        'cost': fine.cost,
+                    })
+            else:
+                fines = db.session.query(
+                    cls.uuid,
+                    cls.label,
+                    cls.cost,
+                    TeamFines.c.team_uuid
+                    ).join(
+                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                    ).filter(
+                        TeamFines.c.team_uuid == user_team_uuid
+                    ).group_by(
+                        TeamFines.c.team_uuid,
+                        cls.uuid
+                    ).paginate(
+                        int(_currentPage),
+                        int(_perPage),
+                        False
+                    )
+                for fine in fines.items:
+                    FINES.append({
+                        'uuid': fine.uuid,
+                        'label': fine.label,
+                        'cost': fine.cost,
+                    })
+            if FINES:
+                FINES[0]['full_count'] = cls.get_count(
+                    db.session.query(TeamFines).filter_by(team_uuid=user_team_uuid)
+                )
         return FINES
+
+    def getOrder(
+        self,
+        order
+    ):
+        return {
+            'labelasc':self.label.asc(),
+            'labeldesc':self.label.desc(),
+            'costasc':self.cost.asc(),
+            'costdesc':self.cost.desc(),
+        }.get(order)
+
+    def get_count(q):
+        count_q = q.statement.with_only_columns([func.count()]).order_by(None)
+        count = q.session.execute(count_q).scalar()
+        return count
 
     @staticmethod
     def create_fine(
