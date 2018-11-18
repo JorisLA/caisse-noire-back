@@ -139,6 +139,7 @@ class FineApi(MethodView):
                 fine=fine,
             )
         except exc.SQLAlchemyError as error:
+            print(error)
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 

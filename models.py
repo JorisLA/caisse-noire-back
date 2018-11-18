@@ -21,7 +21,7 @@ class PlayerFines(db.Model):
     fine_uuid = db.Column(UUID, db.ForeignKey('fine.uuid'))
     player_fines_id = db.Column(UUID, primary_key=True)
 
-    fine = relationship("Fine")
+    fine = relationship("Fine", cascade="all,delete", backref="Fine")
 
 TeamFines = db.Table('TeamFines',
     db.Column('team_uuid', UUID, db.ForeignKey('team.uuid')),
@@ -65,7 +65,7 @@ class Player(db.Model):
     banker = db.Column(db.Boolean(), unique=False, default=True)
     password = db.Column(db.String())
     team_uuid = db.Column(UUID, db.ForeignKey('team.uuid'))
-    fines = relationship("PlayerFines")
+    fines = relationship("PlayerFines", cascade="all,delete", backref="Fine")
 
     def __init__(
             self,
