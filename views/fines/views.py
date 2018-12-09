@@ -1,7 +1,21 @@
-from app import *
 from flask.views import MethodView
 
-class PlayerApi(MethodView):
+from app import (
+    cross_origin,
+    app,
+    request,
+    jsonify,
+    exc, 
+)
+from common.decorators.identification_authorizer import token_required
+from models.repository.team_repository import TeamModelRepository
+from models.repository.fine_repository import FineModelRepository
+
+class FineApi(
+    MethodView,
+    FineModelRepository,
+    TeamModelRepository,
+):
 
     def __init__(
             self,
@@ -15,18 +29,30 @@ class PlayerApi(MethodView):
         *args,
         **kwargs
     ):
-        post_data = request.get_json()        
-        #db = get_db()
-        #db.execute(
-        #    'insert into players (uuid, first_name, last_name) values (?, ?, ?)',
-        #        [
-        #            str(uuid.uuid4()),
-        #            post_data['first_name'],
-        #            post_data['last_name']
-        #        ]
-        #)
-        #db.commit()
-        self.response_object['message'] = 'Player added!'
+        post_data = request.get_json()
+
+        if not kwargs['current_user'].banker:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'The current user is not authorized'}), 403
+
+        if not post_data:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Empty data sent in the request'}), 400
+
+        team = self.get_team_by_uuid(team_uuid=kwargs['current_user'].team_uuid)
+        if not team:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Team not found'}), 404
+        try:
+            self.create_fine(
+                post_data=post_data,
+                team=team,
+            )
+        except exc.SQLAlchemyError as error:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'Internal server error'}), 500
+
+        self.response_object['message'] = 'Fine added!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 201
 
@@ -38,8 +64,6 @@ class PlayerApi(MethodView):
         *args,
         **kwargs
     ):
-        PLAYERS = []
-        FINES = []
         _sort = request.args.get('_sort')
         _order = request.args.get('_order')
         _filter = request.args.get('_filter')
@@ -51,16 +75,7 @@ class PlayerApi(MethodView):
             _offset = 0
 
         try:
-            self.response_object['players'] = Player.get_players(
-                team_uuid=kwargs['current_user'].team_uuid,
-                _sort=_sort,
-                _order=_order,
-                _filter=_filter,
-                _currentPage=_currentPage,
-                _perPage=_perPage,
-                _offset=_offset,
-            )
-            self.response_object['fines'] = Fine.get_fines(
+            self.response_object['fines'] = self.get_fines(
                 user_team_uuid=kwargs['current_user'].team_uuid,
                 _sort=_sort,
                 _order=_order,
@@ -68,12 +83,16 @@ class PlayerApi(MethodView):
                 _currentPage=_currentPage,
                 _perPage=_perPage,
                 _offset=_offset,
-                for_player_view=True,
             )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
+        if not self.response_object['fines']:
+            self.response_object['status'] = 'failure'
+            return jsonify({'message' : 'No fines or wrong team uuid'}), 404
+
+        self.response_object['status'] = 'success'
         return jsonify(self.response_object), 200
 
 
@@ -81,7 +100,7 @@ class PlayerApi(MethodView):
     @token_required
     def put(
         self,
-        player_uuid,
+        fine_uuid,
         *args,
         **kwargs
     ):
@@ -90,28 +109,22 @@ class PlayerApi(MethodView):
         if not kwargs['current_user'].banker:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'The current user is not authorized'}), 403
-
-        player = Player.get_player_by_uuid(player_uuid=player_uuid)
-        if not player:
+        
+        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
+        if not fine:
             self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Player not found'}), 404
+            return jsonify({'message' : 'Fine not found'}), 404
 
         try:
-            if 'fine_uuid' in post_data:
-                fine = Fine.get_fine_by_uuid(fine_uuid=post_data['fine_uuid'])
-                if not fine:
-                    self.response_object['status'] = 'failure'
-                    return jsonify({'message' : 'Fine not found'}), 404
-
-                association = PlayerFines(player_fines_id=str(uuid.uuid4()))
-                association.fine = fine
-                player.fines.append(association)
-            db.session.commit()
-            self.response_object['message'] = 'Player updated!'
+            self.update_fine(
+                post_data=post_data,
+                fine=fine,
+            )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
+        self.response_object['message'] = 'Fine updated!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
 
@@ -120,7 +133,7 @@ class PlayerApi(MethodView):
     @token_required
     def delete(
         self,
-        player_uuid,
+        fine_uuid,
         *args,
         **kwargs
     ):
@@ -130,22 +143,23 @@ class PlayerApi(MethodView):
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'The current user is not authorized'}), 403
 
-        player = Player.get_player_by_uuid(player_uuid=player_uuid)
-        if not player:
+        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
+        if not fine:
             self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Player not found'}), 404
+            return jsonify({'message' : 'Fine not found'}), 404
 
         try:
-            Player.delete_fine(
-                player=player,
+            self.delete_fine(
+                fine=fine,
             )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
-        self.response_object['message'] = 'Player removed!'
+        self.response_object['message'] = 'Fine removed!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
 
-app.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
-app.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))
+
+app.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
+app.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))

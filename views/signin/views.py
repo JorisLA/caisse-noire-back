@@ -1,7 +1,24 @@
-from app import *
+import jwt
+import datetime
+
 from flask.views import MethodView
 
-class SigninApi(MethodView):
+from app import (
+    cross_origin,
+    app,
+    request,
+    jsonify,
+    bcrypt,
+)
+from common.decorators.identification_authorizer import token_required
+from models.repository.team_repository import TeamModelRepository
+from models.repository.player_repository import PlayerModelRepository
+
+class SigninApi(
+    MethodView,
+    TeamModelRepository,
+    PlayerModelRepository,
+):
 
     def __init__(
             self,
@@ -15,7 +32,7 @@ class SigninApi(MethodView):
         **kwargs
     ):
         post_data = request.get_json()
-        player = Player.get_player_by_email(player_email=post_data['email'])
+        player = self.get_player_by_email(player_email=post_data['email'])
         if player is None:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Player not found'}), 404
