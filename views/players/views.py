@@ -31,7 +31,7 @@ class PlayerApi(
         *args,
         **kwargs
     ):
-        post_data = request.get_json()        
+        post_data = request.get_json()
         #db = get_db()
         #db.execute(
         #    'insert into players (uuid, first_name, last_name) values (?, ?, ?)',

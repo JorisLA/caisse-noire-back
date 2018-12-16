@@ -2,6 +2,8 @@ import uuid
 
 from app import db, text, func
 from models.team import Team, TeamFines
+from models.fine import Fine
+from models.player import Player, PlayerFines
 
 class TeamModelRepository(object):
     """
@@ -33,3 +35,56 @@ class TeamModelRepository(object):
         team = Team(uuid=team_uuid, label=team_name)
         db.session.add(team)
         return team_uuid
+
+    def get_best_contributor(
+        self,
+        team_uuid,
+    ):
+        result = db.session.query(
+                func.sum(Fine.cost),
+                Player.first_name,
+                Player.last_name,
+                Player.uuid
+            ).join(
+                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+            ).join(
+                PlayerFines, (TeamFines.c.fine_uuid==PlayerFines.fine_uuid)
+            ).join(
+                Player, (PlayerFines.player_uuid==Player.uuid)
+            ).filter(
+                TeamFines.c.team_uuid == team_uuid,
+            ).group_by(
+                Player.uuid
+            ).order_by(
+                func.sum(Fine.cost).desc()
+            ).first()
+
+        return {
+            'total': result[0],
+            'first_name': result[1],
+            'last_name': result[2],
+        }
+
+    def get_most_recurrent_fine(
+        self,
+        team_uuid,
+    ):
+        result = db.session.query(
+                Fine.label,
+                func.count(PlayerFines.fine_uuid)
+            ).join(
+                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+            ).join(
+                PlayerFines, (TeamFines.c.fine_uuid==PlayerFines.fine_uuid)
+            ).filter(
+                TeamFines.c.team_uuid == team_uuid,
+            ).group_by(
+                Fine.label
+            ).order_by(
+                func.count(PlayerFines.fine_uuid).desc()
+            ).first()
+
+        return {
+            'label': result[0],
+            'total': result[1]
+        }

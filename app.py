@@ -23,7 +23,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SENDGRID_API_KEY'] = 'your api key'
 app.config['SENDGRID_DEFAULT_FROM'] = 'admin@yourdomain.com'
 """ app.json_encoder = JSONSerializer """
-""" app.config['SQLALCHEMY_ECHO'] = True """
+app.config['SQLALCHEMY_ECHO'] = True
 mail = SendGrid(app)
 db = SQLAlchemy(app)
 from models.player import Player, PlayerFines
@@ -40,6 +40,7 @@ import views.players_fines.views
 import views.signin.views
 import views.signup.views
 import views.teams.views
+import views.statistics.views
 
 if __name__ == '__main__':
     print(os.environ['APP_SETTINGS'])
