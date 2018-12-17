@@ -212,5 +212,5 @@ class PlayerModelRepository(object):
         self,
         player,
     ):
-        player.fines = []
+        PlayerFines.query.filter_by(player_uuid=player.uuid).delete()
         db.session.commit()
