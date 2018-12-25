@@ -23,7 +23,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SENDGRID_API_KEY'] = 'your api key'
 app.config['SENDGRID_DEFAULT_FROM'] = 'admin@yourdomain.com'
 """ app.json_encoder = JSONSerializer """
-app.config['SQLALCHEMY_ECHO'] = True
+""" app.config['SQLALCHEMY_ECHO'] = True """
 mail = SendGrid(app)
 db = SQLAlchemy(app)
 from models.player import Player, PlayerFines

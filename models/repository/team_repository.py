@@ -58,12 +58,14 @@ class TeamModelRepository(object):
             ).order_by(
                 func.sum(Fine.cost).desc()
             ).first()
-
-        return {
-            'total': result[0],
-            'first_name': result[1],
-            'last_name': result[2],
-        }
+        if result:
+            return {
+                'total': result[0],
+                'first_name': result[1],
+                'last_name': result[2],
+            }
+        else:
+            return {}
 
     def get_most_recurrent_fine(
         self,
@@ -83,8 +85,10 @@ class TeamModelRepository(object):
             ).order_by(
                 func.count(PlayerFines.fine_uuid).desc()
             ).first()
-
-        return {
-            'label': result[0],
-            'total': result[1]
-        }
+        if result:
+            return {
+                'label': result[0],
+                'total': result[1]
+            }
+        else:
+            return {}
