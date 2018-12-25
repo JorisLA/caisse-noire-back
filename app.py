@@ -20,8 +20,8 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SENDGRID_API_KEY'] = 'your api key'
-app.config['SENDGRID_DEFAULT_FROM'] = 'admin@yourdomain.com'
+app.config['SENDGRID_API_KEY'] = os.environ.get('SENDGRID_API_KEY')
+app.config['SENDGRID_DEFAULT_FROM'] = 'admin@caissenoire.com'
 """ app.json_encoder = JSONSerializer """
 """ app.config['SQLALCHEMY_ECHO'] = True """
 mail = SendGrid(app)

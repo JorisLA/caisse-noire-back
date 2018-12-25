@@ -1,10 +1,14 @@
 from flask.views import MethodView
+import sendgrid
+from sendgrid.helpers.mail import *
 
 from app import (
     cross_origin,
     app,
     request,
-    jsonify
+    jsonify,
+    mail,
+    os
 )
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
@@ -29,6 +33,13 @@ class BillApi(
         response_object = {'status': 'success'}
         PLAYERS = []
         if kwargs['current_user'].banker == 1:
+            sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+            from_email = Email("test@example.com")
+            subject = "Hello World from the SendGrid Python Library!"
+            to_email = Email("joris.laruelle83@gmail.com")
+            content = Content("text/plain", "Hello, Email!")
+            mail = Mail(from_email, subject, to_email, content)
+            response = sg.client.mail.send.post(request_body=mail.get())
             # send single recipient; single email as string
             #mail.send_email(
             #    from_email='joris.laruelle83@gmail.com',
