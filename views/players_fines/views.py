@@ -1,14 +1,11 @@
 from flask.views import MethodView
-import sendgrid
-from sendgrid.helpers.mail import *
 
 from app import (
     cross_origin,
     app,
     request,
     jsonify,
-    mail,
-    os
+    mail
 )
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
@@ -31,23 +28,18 @@ class BillApi(
         **kwargs
     ):
         response_object = {'status': 'success'}
-        PLAYERS = []
+        player_email = []
         if kwargs['current_user'].banker == 1:
-            sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
-            from_email = Email("test@example.com")
-            subject = "Hello World from the SendGrid Python Library!"
-            to_email = Email("joris.laruelle83@gmail.com")
-            content = Content("text/plain", "Hello, Email!")
-            mail = Mail(from_email, subject, to_email, content)
-            response = sg.client.mail.send.post(request_body=mail.get())
-            # send single recipient; single email as string
-            #mail.send_email(
-            #    from_email='joris.laruelle83@gmail.com',
-            #    to_email='joris.laruelle83@gmail.com',
-            #    subject='Subject',
-            #    text='Body'
-            #)
-            return '', 204
+            players = self.get_players_by_team(team_uuid=kwargs['current_user'].team_uuid)
+            for player in players:
+                fine_cost = self.get_player_fine_cost(player_uuid=player.uuid)
+                mail.send_email(
+                    from_email='admin@caissenoire.com',
+                    to_email=player.email,
+                    subject='Caisse noire payment',
+                    text='You have to pay {} € this month'.format(fine_cost),
+                )
+        return '', 204
 
     @cross_origin()
     @token_required

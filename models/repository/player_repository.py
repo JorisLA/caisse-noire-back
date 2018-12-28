@@ -191,14 +191,27 @@ class PlayerModelRepository(object):
         player_uuid,
     ):     
         result = []
-        fines = db.session.query(PlayerFines).\
-            filter(PlayerFines.player_uuid==player_uuid)        
+        fines = db.session.query(
+                PlayerFines
+            ).filter(PlayerFines.player_uuid==player_uuid)
         for fine in fines:    
             result.append(
                 fine.fine.label,
             )
         final_result = collections.Counter(result)
         return final_result
+
+    def get_player_fine_cost(
+        self,
+        player_uuid,
+    ):
+        return db.session.query(
+            func.sum(Fine.cost)
+        ).join(
+            PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
+        ).join(
+            Player, (Player.uuid==PlayerFines.player_uuid)
+        ).filter(PlayerFines.player_uuid==player_uuid).order_by(func.sum(Fine.cost)).limit(1).scalar()
 
     def delete_players_fines(
         self,
