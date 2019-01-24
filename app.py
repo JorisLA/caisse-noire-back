@@ -1,4 +1,3 @@
-import sqlite3
 import os
 
 from flask import Flask, jsonify, request, g, session, make_response
@@ -11,9 +10,6 @@ from functools import wraps
 from sqlalchemy.sql import text
 
 from common.json_encoder import JSONSerializer
-
-# configuration
-DEBUG = True
 
 # instantiate the app
 app = Flask(__name__)

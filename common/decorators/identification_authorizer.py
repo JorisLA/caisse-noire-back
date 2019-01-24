@@ -29,7 +29,7 @@ def token_required(f):
             return jsonify({'message' : 'Token is missing!'}), 401
 
         try: 
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
             current_user = Player.query.filter_by(uuid=data['public_id']).first()
             kwargs['current_user'] = current_user
         except:

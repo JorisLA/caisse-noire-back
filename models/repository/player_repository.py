@@ -41,8 +41,9 @@ class PlayerModelRepository(object):
         self,
         player_info,
     ):
+        player_uuid = str(uuid.uuid4())
         player = Player(
-            uuid=str(uuid.uuid4()),
+            uuid=player_uuid,
             first_name=player_info['first_name'],
             last_name=player_info['last_name'],
             email=player_info['email'],
@@ -52,6 +53,7 @@ class PlayerModelRepository(object):
         )
         db.session.add(player)
         db.session.commit()
+        return player_uuid
 
     def delete_player(
         self,

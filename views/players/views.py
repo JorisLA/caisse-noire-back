@@ -12,6 +12,7 @@ from app import (
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
 from models.repository.fine_repository import FineModelRepository
+from common.settings import MAX_PER_PAGE
 
 class PlayerApi(
     MethodView,
@@ -59,8 +60,8 @@ class PlayerApi(
         _sort = request.args.get('_sort')
         _order = request.args.get('_order')
         _filter = request.args.get('_filter')
-        _currentPage = request.args.get('_currentPage')
-        _perPage = request.args.get('_perPage')
+        _currentPage = request.args.get('_currentPage', 1)
+        _perPage = request.args.get('_perPage', MAX_PER_PAGE)
         if _currentPage and _perPage:
             _offset = int(_perPage) * (int(_currentPage) - 1)
         else:
