@@ -27,7 +27,6 @@ class BillApi(
         *args,
         **kwargs
     ):
-        response_object = {'status': 'success'}
         player_email = []
         if kwargs['current_user'].banker == 1:
             players = self.get_players_by_team(team_uuid=kwargs['current_user'].team_uuid)
@@ -49,7 +48,6 @@ class BillApi(
         *args,
         **kwargs
     ):
-        response_object = {'status': 'success'}
         self.response_object['fines']  = self.get_player_fines(player_uuid=player_uuid)
         return jsonify(self.response_object), 200
 
@@ -61,7 +59,6 @@ class BillApi(
         *args,
         **kwargs
     ):
-        response_object = {'status': 'success'}
         if kwargs['current_user'].banker == 1:
             player = self.get_player_by_uuid(player_uuid=player_uuid)
             self.delete_player_fines(player=player)

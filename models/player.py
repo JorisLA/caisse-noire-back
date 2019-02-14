@@ -1,7 +1,6 @@
 import uuid
 
 from sqlalchemy.dialects.postgresql import JSON, UUID
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import bindparam
 
@@ -25,6 +24,7 @@ class PlayerFines(db.Model):
 class Player(db.Model):
     __tablename__ = 'player'
 
+    id = db.Column(db.Integer, autoincrement=True, index=True)
     uuid = db.Column(UUID, primary_key=True)
     first_name = db.Column(db.String())
     last_name = db.Column(db.String())
@@ -49,11 +49,25 @@ class Player(db.Model):
         self.last_name = last_name
         self.email = email
         self.banker = banker
-        self.banker = banker
         self.team_uuid = team_uuid
         self.password = password
 
-    def __repr__(self):
-        return '<uuid {}>'.format(self.uuid)
+    #def __repr__(self):
+    #    return '<uuid {}>'.format(self.uuid)
 
+    def to_dict(self):
+        """
+        """
+        info = {
+            'uuid': self.uuid,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'total': self._total_fines()
+        }
 
+        return info
+
+    def _total_fines(self):
+        """
+        """
+        return sum([fine.fine.cost for fine in self.fines])

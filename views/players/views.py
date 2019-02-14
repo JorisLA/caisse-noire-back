@@ -57,27 +57,24 @@ class PlayerApi(
     ):
         PLAYERS = []
         FINES = []
-        _sort = request.args.get('_sort')
-        _order = request.args.get('_order')
-        _filter = request.args.get('_filter')
-        _currentPage = request.args.get('_currentPage', 1)
-        _perPage = request.args.get('_perPage', MAX_PER_PAGE)
-        if _currentPage and _perPage:
-            _offset = int(_perPage) * (int(_currentPage) - 1)
-        else:
-            _offset = 0
-
+        additional_filters = {
+            'sort':request.args.get('_sort', None),
+            'order':request.args.get('_order', None),
+            'filter':request.args.get('_filter', None),
+            'currentPage':request.args.get('_currentPage', 1),
+            'perPage':request.args.get('_perPage', MAX_PER_PAGE),
+            'lastUuid':request.args.get('_lastUuid', None),
+        }
         try:
-            self.response_object['players'] = self.get_players(
+            results = self.get_all_players_from_team(
                 team_uuid=kwargs['current_user'].team_uuid,
-                _sort=_sort,
-                _order=_order,
-                _filter=_filter,
-                _currentPage=_currentPage,
-                _perPage=_perPage,
-                _offset=_offset,
+                additional_filters=additional_filters
             )
-            self.response_object['full_count'] = len(self.response_object['players'])
+            self.response_object['players'] = [
+                player.to_dict()
+                for player in results['players']
+            ]
+            self.response_object['full_count'] = results['total_rows']
             self.response_object['fines'] = self.get_fines(
                 user_team_uuid=kwargs['current_user'].team_uuid,
                 _sort=_sort,

@@ -37,7 +37,10 @@ class Client():
         self.app_test.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
         self.app_test.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))
         self.app_test.add_url_rule('/signin', view_func=SigninApi.as_view('signin'))
-    
+        self.app_test.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
+        self.app_test.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))
+        self.app_test.add_url_rule('/bills', view_func=BillApi.as_view('bills'))
+        self.app_test.add_url_rule('/bills/<player_uuid>', view_func=BillApi.as_view('bill'))
         # Establish an application context before running the tests.
         self.ctx = self.app_test.app_context()
 

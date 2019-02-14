@@ -1,6 +1,9 @@
 import uuid
 import collections
 
+from sqlalchemy import or_
+from sqlalchemy.sql import select
+
 from app import db, text, func
 from models.player import Player, PlayerFines
 from models.fine import Fine
@@ -61,6 +64,48 @@ class PlayerModelRepository(object):
     ):
         db.session.delete(player)
         db.session.commit()
+
+    def get_all_players_from_team(
+        self,
+        team_uuid,
+        additional_filters,
+    ):
+        total_rows = db.session.query(Player).count()
+        players = db.session.query(Player).filter(
+            Player.team_uuid==team_uuid
+        )
+        if additional_filters.get('lastUuid') != '':
+            from_object = Player.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
+
+        # FILTER BY FIRST NAME OR LAST NAME
+        if additional_filters.get('filter') is not None:
+            players = players.filter(
+                or_(
+                    Player.first_name.ilike('%%%s%%' % additional_filters.get('filter')),
+                    Player.last_name.ilike('%%%s%%' % additional_filters.get('filter')),
+                )
+            )
+        # FIRST PAGE
+        if int(additional_filters.get('currentPage')) == 1:
+            if additional_filters.get('order') == 'asc' and additional_filters.get('sort') == 'first_name':
+                players = players.order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
+            elif additional_filters.get('order') == 'desc' and additional_filters.get('sort') == 'first_name':
+                players = players.order_by(Player.first_name.desc()).limit(int(additional_filters.get('perPage')))
+            else:
+                players = players.order_by(Player.id.asc()).limit(int(additional_filters.get('perPage')))
+        else:
+            if additional_filters.get('order') == 'asc' and additional_filters.get('sort') == 'first_name':
+                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
+            elif additional_filters.get('order') == 'desc' and additional_filters.get('sort') == 'first_name':
+                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.desc()).limit(int(additional_filters.get('perPage')))
+            else:
+                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
+
+
+        return {
+            'players' : players,
+            'total_rows' : total_rows,
+        }
 
     def get_players(
         self,
