@@ -17,12 +17,7 @@ class FineModelRepository(object):
     def get_fines(
         self,
         user_team_uuid,
-        _sort,
-        _order,
-        _filter,
-        _currentPage,
-        _perPage,
-        _offset,
+        additional_filters,
         for_player_view=False,
     ):
         FINES = []
@@ -45,7 +40,7 @@ class FineModelRepository(object):
                     'text': fine.label
                 })
         else:
-            if _filter:
+            if additional_filters.get('filter'):
                 fines = db.session.query(
                     Fine.uuid,
                     Fine.label,
@@ -55,7 +50,7 @@ class FineModelRepository(object):
                         TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
                     ).filter(
                         TeamFines.c.team_uuid == user_team_uuid,
-                        Fine.label.like('%'+_filter+'%')
+                        Fine.label.like('%'+additional_filters.get('filter')+'%')
                     )
                 for fine in fines:
                     FINES.append({
@@ -63,8 +58,8 @@ class FineModelRepository(object):
                         'label': fine.label,
                         'cost': fine.cost,
                     })
-            elif _sort and _order:
-                ordering = '{}{}'.format(_sort,_order)
+            elif additional_filters.get('sort') and additional_filters.get('order'):
+                ordering = '{}{}'.format(additional_filters.get('sort'), additional_filters.get('order'))
                 fines = db.session.query(
                     Fine.uuid,
                     Fine.label,
@@ -80,8 +75,8 @@ class FineModelRepository(object):
                     ).order_by(
                         self.getOrder(ordering)
                     ).paginate(
-                        int(_currentPage),
-                        int(_perPage),
+                        int(additional_filters.get('currentPage')),
+                        int(additional_filters.get('perPage')),
                         False
                     )
                 for fine in fines.items:
@@ -104,8 +99,8 @@ class FineModelRepository(object):
                         TeamFines.c.team_uuid,
                         Fine.uuid
                     ).paginate(
-                        int(_currentPage),
-                        int(_perPage),
+                        int(additional_filters.get('currentPage')),
+                        int(additional_filters.get('perPage')),
                         False
                     )
                 for fine in fines.items:

@@ -10,6 +10,7 @@ from app import (
 from common.decorators.identification_authorizer import token_required
 from models.repository.team_repository import TeamModelRepository
 from models.repository.fine_repository import FineModelRepository
+from common.settings import MAX_PER_PAGE
 
 class FineApi(
     MethodView,
@@ -64,25 +65,18 @@ class FineApi(
         *args,
         **kwargs
     ):
-        _sort = request.args.get('_sort')
-        _order = request.args.get('_order')
-        _filter = request.args.get('_filter')
-        _currentPage = request.args.get('_currentPage')
-        _perPage = request.args.get('_perPage')
-        if _currentPage and _perPage:
-            _offset = int(_perPage) * (int(_currentPage) - 1)
-        else:
-            _offset = 0
-
+        additional_filters = {
+            'sort':request.args.get('_sort', None),
+            'order':request.args.get('_order', None),
+            'filter':request.args.get('_filter', None),
+            'currentPage':request.args.get('_currentPage', 1),
+            'perPage':request.args.get('_perPage', MAX_PER_PAGE),
+            'lastUuid':request.args.get('_lastUuid', None),
+        }
         try:
             self.response_object['fines'] = self.get_fines(
                 user_team_uuid=kwargs['current_user'].team_uuid,
-                _sort=_sort,
-                _order=_order,
-                _filter=_filter,
-                _currentPage=_currentPage,
-                _perPage=_perPage,
-                _offset=_offset,
+                additional_filters=additional_filters,
             )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'

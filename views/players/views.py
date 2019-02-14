@@ -77,12 +77,7 @@ class PlayerApi(
             self.response_object['full_count'] = results['total_rows']
             self.response_object['fines'] = self.get_fines(
                 user_team_uuid=kwargs['current_user'].team_uuid,
-                _sort=_sort,
-                _order=_order,
-                _filter=_filter,
-                _currentPage=_currentPage,
-                _perPage=_perPage,
-                _offset=_offset,
+                additional_filters=additional_filters,
                 for_player_view=True,
             )
         except exc.SQLAlchemyError as error:
