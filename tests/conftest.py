@@ -21,6 +21,7 @@ from views.signup.views import SignupApi
 from views.teams.views import TeamApi
 from views.statistics.views import StatisticApi
 from tests.db import PopulateDatabaseAsAdmin
+from tests.client import Client
  
 class HttpClient(PopulateDatabaseAsAdmin):
     pass
@@ -73,5 +74,13 @@ def banker():
     yield client  # this is where the testing happens!
  
     client.ctx.pop()
-    db.drop_all()
+    #db.drop_all()
 
+@pytest.fixture(scope='module')
+def simple_client():
+    simple_client = Client()
+
+    yield simple_client
+
+    simple_client.ctx.pop()
+    db.drop_all()

@@ -70,13 +70,12 @@ class PlayerModelRepository(object):
         team_uuid,
         additional_filters,
     ):
-        total_rows = db.session.query(Player).count()
+        total_rows = Player.query.filter_by(team_uuid=team_uuid).count()
         players = db.session.query(Player).filter(
             Player.team_uuid==team_uuid
         )
         if additional_filters.get('lastUuid') != '':
             from_object = Player.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
-
         # FILTER BY FIRST NAME OR LAST NAME
         if additional_filters.get('filter') is not None:
             players = players.filter(
@@ -85,23 +84,23 @@ class PlayerModelRepository(object):
                     Player.last_name.ilike('%%%s%%' % additional_filters.get('filter')),
                 )
             )
+            return {
+                'players' : players,
+                'total_rows' : total_rows,
+            }
+
+
         # FIRST PAGE
         if int(additional_filters.get('currentPage')) == 1:
-            if additional_filters.get('order') == 'asc' and additional_filters.get('sort') == 'first_name':
-                players = players.order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
-            elif additional_filters.get('order') == 'desc' and additional_filters.get('sort') == 'first_name':
-                players = players.order_by(Player.first_name.desc()).limit(int(additional_filters.get('perPage')))
-            else:
-                players = players.order_by(Player.id.asc()).limit(int(additional_filters.get('perPage')))
+            players = players.order_by(Player.created_date.asc()).limit(int(additional_filters.get('perPage')))
         else:
-            if additional_filters.get('order') == 'asc' and additional_filters.get('sort') == 'first_name':
-                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
-            elif additional_filters.get('order') == 'desc' and additional_filters.get('sort') == 'first_name':
-                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.desc()).limit(int(additional_filters.get('perPage')))
-            else:
-                players = players.filter(Player.id > from_object.id).order_by(Player.first_name.asc()).limit(int(additional_filters.get('perPage')))
-
-
+            players = players.filter(
+                Player.created_date > from_object.created_date
+            ).order_by(
+                Player.first_name.asc()
+            ).limit(
+                int(additional_filters.get('perPage'))
+            )
         return {
             'players' : players,
             'total_rows' : total_rows,

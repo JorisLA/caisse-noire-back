@@ -1,8 +1,9 @@
 import uuid
+import datetime
 
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy import bindparam
+from sqlalchemy import bindparam, DateTime
 
 from app import db, text, func
 from models.db_base import Base
@@ -24,7 +25,6 @@ class PlayerFines(db.Model):
 class Player(db.Model):
     __tablename__ = 'player'
 
-    id = db.Column(db.Integer, autoincrement=True, index=True)
     uuid = db.Column(UUID, primary_key=True)
     first_name = db.Column(db.String())
     last_name = db.Column(db.String())
@@ -33,6 +33,7 @@ class Player(db.Model):
     password = db.Column(db.String())
     team_uuid = db.Column(UUID, db.ForeignKey('team.uuid'))
     fines = relationship("PlayerFines", cascade="all,delete", backref="Fine")
+    created_date = db.Column(DateTime, default=datetime.datetime.utcnow, index=True)
 
     def __init__(
             self,
@@ -59,6 +60,7 @@ class Player(db.Model):
         """
         """
         info = {
+            'date': self.created_date,
             'uuid': self.uuid,
             'first_name': self.first_name,
             'last_name': self.last_name,
