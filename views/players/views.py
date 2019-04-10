@@ -112,14 +112,14 @@ class PlayerApi(
                 if not fine:
                     self.response_object['status'] = 'failure'
                     return jsonify({'message' : 'Fine not found'}), 404
-                self.update_player_fine(player, fine)
+                self.response_object['player'] = self.update_player_fine(player, fine)
             self.response_object['message'] = 'Player updated!'
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
         self.response_object['status'] = 'success'
-        return jsonify(self.response_object), 204
+        return jsonify({'total':self.response_object['player']['total']}), 200
 
 
     @cross_origin()

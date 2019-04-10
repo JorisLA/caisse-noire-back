@@ -21,6 +21,7 @@ class PlayerModelRepository(object):
         association.fine = fine
         player.fines.append(association)
         db.session.commit()
+        return player.to_dict()
 
     def get_players_by_team(
         self,
