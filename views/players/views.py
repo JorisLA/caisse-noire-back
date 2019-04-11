@@ -75,8 +75,8 @@ class PlayerApi(
                 for player in results['players']
             ]
             self.response_object['full_count'] = results['total_rows']
-            self.response_object['fines'] = self.get_fines(
-                user_team_uuid=kwargs['current_user'].team_uuid,
+            self.response_object['fines'] = self.get_all_fines_by_team(
+                team_uuid=kwargs['current_user'].team_uuid,
                 additional_filters=additional_filters,
                 for_player_view=True,
             )

@@ -2,7 +2,7 @@ import uuid
 
 from app import db, text, func
 from models.fine import Fine
-from models.team import TeamFines
+from models.team import TeamFines, Team
 
 class FineModelRepository(object):
     """
@@ -14,9 +14,9 @@ class FineModelRepository(object):
     ):
         return Fine.query.filter_by(uuid=fine_uuid).first()
 
-    def get_fines(
+    def get_all_fines_by_team(
         self,
-        user_team_uuid,
+        team_uuid,
         additional_filters,
         for_player_view=False,
     ):
@@ -30,7 +30,7 @@ class FineModelRepository(object):
                 ).join(
                     TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
                 ).filter(
-                    TeamFines.c.team_uuid == user_team_uuid
+                    TeamFines.c.team_uuid == team_uuid
                 ).group_by(
                     TeamFines.c.team_uuid,
                     Fine.uuid
@@ -40,80 +40,43 @@ class FineModelRepository(object):
                     'text': fine.label
                 })
         else:
-            if additional_filters.get('filter'):
-                fines = db.session.query(
-                    Fine.uuid,
-                    Fine.label,
-                    Fine.cost,
-                    TeamFines.c.team_uuid
-                    ).join(
-                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-                    ).filter(
-                        TeamFines.c.team_uuid == user_team_uuid,
-                        Fine.label.like('%'+additional_filters.get('filter')+'%')
-                    )
-                for fine in fines:
-                    FINES.append({
-                        'uuid': fine.uuid,
-                        'label': fine.label,
-                        'cost': fine.cost,
-                    })
-            elif additional_filters.get('sort') and additional_filters.get('order'):
-                ordering = '{}{}'.format(additional_filters.get('sort'), additional_filters.get('order'))
-                fines = db.session.query(
-                    Fine.uuid,
-                    Fine.label,
-                    Fine.cost,
-                    TeamFines.c.team_uuid
-                    ).join(
-                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-                    ).filter(
-                        TeamFines.c.team_uuid == user_team_uuid
-                    ).group_by(
-                        TeamFines.c.team_uuid,
-                        Fine.uuid
-                    ).order_by(
-                        self.getOrder(ordering)
-                    ).paginate(
-                        int(additional_filters.get('currentPage')),
-                        int(additional_filters.get('perPage')),
-                        False
-                    )
-                for fine in fines.items:
-                    FINES.append({
-                        'uuid': fine.uuid,
-                        'label': fine.label,
-                        'cost': fine.cost,
-                    })
-            else:
-                fines = db.session.query(
-                    Fine.uuid,
-                    Fine.label,
-                    Fine.cost,
-                    TeamFines.c.team_uuid
-                    ).join(
-                        TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-                    ).filter(
-                        TeamFines.c.team_uuid == user_team_uuid
-                    ).group_by(
-                        TeamFines.c.team_uuid,
-                        Fine.uuid
-                    ).paginate(
-                        int(additional_filters.get('currentPage')),
-                        int(additional_filters.get('perPage')),
-                        False
-                    )
-                for fine in fines.items:
-                    FINES.append({
-                        'uuid': fine.uuid,
-                        'label': fine.label,
-                        'cost': fine.cost,
-                    })
-            if FINES:
-                FINES[0]['full_count'] = self.get_count(
-                    db.session.query(TeamFines).filter_by(team_uuid=user_team_uuid)
+            total_rows = self.get_count(
+                db.session.query(TeamFines).filter_by(team_uuid=team_uuid)
+            )
+            fines = db.session.query(
+                Fine,
+                TeamFines.c.team_uuid
+                ).join(
+                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+                ).filter(
+                    TeamFines.c.team_uuid == team_uuid
                 )
-        return FINES
+            if additional_filters.get('lastUuid') != '':
+                from_object = Fine.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
+            # FILTER BY LABEL
+            if additional_filters.get('filter'):
+                fines = fines.filter(
+                    Fine.label.like('%'+additional_filters.get('filter')+'%')
+                )
+                return {
+                    'fines' : fines,
+                    'total_rows' : total_rows,
+                }
+
+            if int(additional_filters.get('currentPage')) == 1:
+                fines = fines.order_by(Fine.created_date.asc()).limit(int(additional_filters.get('perPage')))
+            else:
+                fines = fines.filter(
+                    Fine.created_date > from_object.created_date
+                ).order_by(
+                    Fine.label.asc()
+                ).limit(
+                    int(additional_filters.get('perPage'))
+                )
+            return {
+                'fines' : fines,
+                'total_rows' : total_rows,
+            }
 
     def getOrder(
         self,

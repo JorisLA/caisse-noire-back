@@ -74,17 +74,21 @@ class FineApi(
             'lastUuid':request.args.get('_lastUuid', None),
         }
         try:
-            self.response_object['fines'] = self.get_fines(
-                user_team_uuid=kwargs['current_user'].team_uuid,
+            results = self.get_all_fines_by_team(
+                team_uuid=kwargs['current_user'].team_uuid,
                 additional_filters=additional_filters,
             )
+            self.response_object['fines'] = [
+                fine.to_dict()
+                for fine in results['fines']
+            ]
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
-        if not self.response_object['fines']:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'No fines or wrong team uuid'}), 404
+        # if not self.response_object['fines']:
+        #     self.response_object['status'] = 'failure'
+        #     return jsonify({'message' : 'No fines or wrong team uuid'}), 404
 
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 200
