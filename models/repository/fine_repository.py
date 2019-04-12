@@ -3,6 +3,7 @@ import uuid
 from app import db, text, func
 from models.fine import Fine
 from models.team import Team
+from models.player import PlayerFines
 
 class FineModelRepository(object):
     """
@@ -100,5 +101,7 @@ class FineModelRepository(object):
         self,
         fine,
     ):
+        PlayerFines.query.filter(PlayerFines.fine_uuid==fine.uuid).delete()
+        db.session.commit()
         db.session.delete(fine)
         db.session.commit()
