@@ -8,10 +8,6 @@ from sqlalchemy import bindparam, DateTime
 from app import db, text, func
 from models.db_base import Base
 
-#PlayerFines = db.Table('TeamFines',
-#    db.Column('player_uuid', UUID, db.ForeignKey('player.uuid')),
-#    db.Column('fine_uuid', UUID, db.ForeignKey('fine.uuid'))
-#)
 
 class PlayerFines(db.Model):
     __tablename__ = 'PlayerFines'

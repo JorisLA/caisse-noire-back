@@ -75,11 +75,15 @@ class PlayerApi(
                 for player in results['players']
             ]
             self.response_object['full_count'] = results['total_rows']
-            self.response_object['fines'] = self.get_all_fines_by_team(
+            results = self.get_all_fines_by_team(
                 team_uuid=kwargs['current_user'].team_uuid,
                 additional_filters=additional_filters,
                 for_player_view=True,
             )
+            self.response_object['fines'] = [
+                fine.to_dict(for_player_view=True)
+                for fine in results['fines']
+            ]
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500

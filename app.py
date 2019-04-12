@@ -23,7 +23,7 @@ app.config['SENDGRID_DEFAULT_FROM'] = 'admin@caissenoire.com'
 mail = SendGrid(app)
 db = SQLAlchemy(app)
 from models.player import Player, PlayerFines
-from models.team import Team, TeamFines
+from models.team import Team
 from models.fine import Fine
 # enable CORS
 cors = CORS(app)

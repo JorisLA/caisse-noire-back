@@ -16,20 +16,31 @@ class Fine(db.Model):
     label = db.Column(db.String())
     cost = db.Column(db.Integer())
     created_date = db.Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    team_uuid = db.Column(UUID, db.ForeignKey('team.uuid'))
 
     def __init__(
             self,
             uuid,
             label,
             cost,
+            team_uuid,
     ):
         self.uuid = uuid
         self.label = label
         self.cost = cost
+        self.team_uuid = team_uuid
 
-    def to_dict(self):
+    def to_dict(self, for_player_view=False):
         """
         """
+        if for_player_view:
+            info = {
+                'value': self.uuid,
+                'text': self.label,
+            }
+
+            return info
+
         info = {
             'date': self.created_date,
             'uuid': self.uuid,

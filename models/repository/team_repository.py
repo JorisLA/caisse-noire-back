@@ -1,7 +1,7 @@
 import uuid
 
 from app import db, text, func
-from models.team import Team, TeamFines
+from models.team import Team
 from models.fine import Fine
 from models.player import Player, PlayerFines
 
@@ -46,13 +46,11 @@ class TeamModelRepository(object):
                 Player.last_name,
                 Player.uuid
             ).join(
-                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-            ).join(
-                PlayerFines, (TeamFines.c.fine_uuid==PlayerFines.fine_uuid)
+                PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
             ).join(
                 Player, (PlayerFines.player_uuid==Player.uuid)
             ).filter(
-                TeamFines.c.team_uuid == team_uuid,
+                Fine.team_uuid==team_uuid,
             ).group_by(
                 Player.uuid
             ).order_by(
@@ -75,11 +73,9 @@ class TeamModelRepository(object):
                 Fine.label,
                 func.count(PlayerFines.fine_uuid)
             ).join(
-                TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-            ).join(
-                PlayerFines, (TeamFines.c.fine_uuid==PlayerFines.fine_uuid)
+                PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
             ).filter(
-                TeamFines.c.team_uuid == team_uuid,
+                Fine.team_uuid==team_uuid,
             ).group_by(
                 Fine.label
             ).order_by(

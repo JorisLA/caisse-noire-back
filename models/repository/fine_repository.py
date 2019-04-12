@@ -2,7 +2,7 @@ import uuid
 
 from app import db, text, func
 from models.fine import Fine
-from models.team import TeamFines, Team
+from models.team import Team
 
 class FineModelRepository(object):
     """
@@ -20,36 +20,19 @@ class FineModelRepository(object):
         additional_filters,
         for_player_view=False,
     ):
-        FINES = []
-        if for_player_view:
-            for fine in db.session.query(
-                Fine.uuid,
-                Fine.label,
-                Fine.cost,
-                TeamFines.c.team_uuid
-                ).join(
-                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
-                ).filter(
-                    TeamFines.c.team_uuid == team_uuid
-                ).group_by(
-                    TeamFines.c.team_uuid,
-                    Fine.uuid
-                ):
-                FINES.append({
-                    'value': fine.uuid,
-                    'text': fine.label
-                })
-        else:
-            total_rows = self.get_count(
-                db.session.query(TeamFines).filter_by(team_uuid=team_uuid)
+        fines = db.session.query(Fine
+            ).filter(
+                Fine.team_uuid==team_uuid
             )
-            fines = db.session.query(
-                Fine,
-                TeamFines.c.team_uuid
-                ).join(
-                    TeamFines, (Fine.uuid==TeamFines.c.fine_uuid)
+        if for_player_view:
+            return {
+                'fines' : fines,
+            }
+        else:
+            total_rows = Fine.query.filter_by(team_uuid=team_uuid).count()
+            fines = db.session.query(Fine
                 ).filter(
-                    TeamFines.c.team_uuid == team_uuid
+                    Fine.team_uuid==team_uuid
                 )
             if additional_filters.get('lastUuid') != '':
                 from_object = Fine.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
@@ -89,14 +72,6 @@ class FineModelRepository(object):
             'costdesc':Fine.cost.desc(),
         }.get(order)
 
-    def get_count(
-        self,
-        q,
-    ):
-        count_q = q.statement.with_only_columns([func.count()]).order_by(None)
-        count = q.session.execute(count_q).scalar()
-        return count
-
     def create_fine(
         self,
         post_data,
@@ -106,10 +81,10 @@ class FineModelRepository(object):
         fine = Fine(
             uuid=str(uuid.uuid4()),
             label=post_data['label'],
-            cost=post_data['cost']
+            cost=post_data['cost'],
+            team_uuid=team.uuid
         )
         db.session.add(fine)
-        fine.teams_fines.append(team)
         db.session.commit()
 
     def update_fine(
