@@ -1,9 +1,13 @@
 import uuid
 
-from app import db, text, func
+from sqlalchemy import func
+from flask_sqlalchemy import SQLAlchemy
+
 from models.team import Team
 from models.fine import Fine
 from models.player import Player, PlayerFines
+from flask import current_app
+db = SQLAlchemy(current_app)
 
 class TeamModelRepository(object):
     """
@@ -13,13 +17,13 @@ class TeamModelRepository(object):
         self,
         team_uuid,
     ):
-        return Team.query.filter_by(uuid=team_uuid).first()
+        return db.session.query(Team).filter_by(uuid=team_uuid).first()
 
     def get_teams(
         self,
     ):
         final_result = []
-        teams = Team.query.all()
+        teams = db.session.query(Team).all()
         for team in teams:
             final_result.append({
                 'value': team.uuid,

@@ -1,22 +1,24 @@
 import uuid
 
-from flask.views import MethodView
+from flask import request, jsonify
+from flask.views import MethodView, View
+from flask_bcrypt import Bcrypt
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    bcrypt,
-)
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
 from models.repository.team_repository import TeamModelRepository
+from views.base_handler import BaseHandler
+
+bcrypt = Bcrypt()
 
 class SignupApi(
     MethodView,
+    View,
     PlayerModelRepository,
     TeamModelRepository,
+    BaseHandler,
 ):
 
     def __init__(
@@ -44,5 +46,3 @@ class SignupApi(
         post_data['team_uuid'] = team_uuid
         self.create_player(post_data)
         return '', 204
-
-app.add_url_rule('/signup', view_func=SignupApi.as_view('signup'))

@@ -1,23 +1,25 @@
 import jwt
 import datetime
 
-from flask.views import MethodView
+from flask import request, jsonify, current_app
+from flask.views import MethodView, View
+from flask_bcrypt import Bcrypt
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    bcrypt,
-)
 from common.decorators.identification_authorizer import token_required
 from models.repository.team_repository import TeamModelRepository
 from models.repository.player_repository import PlayerModelRepository
+from views.base_handler import BaseHandler
+
+bcrypt = Bcrypt()
 
 class SigninApi(
     MethodView,
+    View,
     TeamModelRepository,
     PlayerModelRepository,
+    BaseHandler,
 ):
 
     def __init__(
@@ -49,7 +51,7 @@ class SigninApi(
                         'team_uuid' : player.team_uuid,
                         'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
                     },
-                    app.config['SECRET_KEY']
+                    current_app.config['SECRET_KEY']
                 )
 
                 return jsonify(
@@ -58,5 +60,3 @@ class SigninApi(
                             'banker' : player.banker,
                         }
                     )
-
-app.add_url_rule('/signin', view_func=SigninApi.as_view('signin'))

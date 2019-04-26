@@ -1,18 +1,20 @@
-from flask.views import MethodView
+from flask.views import MethodView, View
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from flask_sendgrid import SendGrid
+from sqlalchemy import exc
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    mail
-)
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
+from views.base_handler import BaseHandler
+
+mail = SendGrid()
 
 class BillApi(
     MethodView,
+    View,
     PlayerModelRepository,
+    BaseHandler
 ):
 
     def __init__(
@@ -63,7 +65,3 @@ class BillApi(
             player = self.get_player_by_uuid(player_uuid=player_uuid)
             self.delete_player_fines(player=player)
             return '', 204
-
-
-app.add_url_rule('/bills', view_func=BillApi.as_view('bills'))
-app.add_url_rule('/bills/<player_uuid>', view_func=BillApi.as_view('bill'))

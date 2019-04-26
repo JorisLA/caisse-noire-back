@@ -1,19 +1,23 @@
 import uuid
 
 from flask.views import MethodView
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from flask_sqlalchemy import SQLAlchemy
+from flask.views import View
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify
-)
 from common.decorators.identification_authorizer import token_required
 from models.repository.team_repository import TeamModelRepository
+from models.team import Team
+from views.base_handler import BaseHandler
+from flask import current_app
+db = SQLAlchemy(current_app)
 
 class TeamApi(
     MethodView,
+    View,
     TeamModelRepository,
+    BaseHandler,
 ):
 
     def __init__(
@@ -46,5 +50,3 @@ class TeamApi(
         self.response_object = {}
         self.response_object['teams'] = self.get_teams()
         return jsonify(self.response_object)
-
-app.add_url_rule('/teams', view_func=TeamApi.as_view('teams'))

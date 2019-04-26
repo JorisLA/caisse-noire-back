@@ -1,23 +1,22 @@
 import uuid
 
-from flask.views import MethodView
+from flask.views import MethodView, View
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    exc,
-)
 from common.decorators.identification_authorizer import token_required
 from models.repository.player_repository import PlayerModelRepository
 from models.repository.fine_repository import FineModelRepository
+from views.base_handler import BaseHandler
 from common.settings import MAX_PER_PAGE
 
 class PlayerApi(
     MethodView,
+    View,
     PlayerModelRepository,
     FineModelRepository,
+    BaseHandler
 ):
 
     def __init__(
@@ -119,6 +118,7 @@ class PlayerApi(
                 self.response_object['player'] = self.update_player_fine(player, fine)
             self.response_object['message'] = 'Player updated!'
         except exc.SQLAlchemyError as error:
+            print(error)
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
@@ -156,6 +156,3 @@ class PlayerApi(
         self.response_object['message'] = 'Player removed!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
-
-app.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
-app.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))

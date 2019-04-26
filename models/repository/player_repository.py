@@ -1,12 +1,15 @@
 import uuid
 import collections
 
-from sqlalchemy import or_
-from sqlalchemy.sql import select
+from sqlalchemy import or_, func
+from sqlalchemy.sql import select, text
+from flask_sqlalchemy import SQLAlchemy
 
-from app import db, text, func
+# from app import db, text, func
 from models.player import Player, PlayerFines
 from models.fine import Fine
+from flask import current_app
+db = SQLAlchemy(current_app)
 
 class PlayerModelRepository(object):
     """
@@ -17,6 +20,8 @@ class PlayerModelRepository(object):
         player,
         fine,
     ):
+        print(player)
+        print(fine)
         association = PlayerFines(player_fines_id=str(uuid.uuid4()))
         association.fine = fine
         player.fines.append(association)
@@ -27,19 +32,19 @@ class PlayerModelRepository(object):
         self,
         team_uuid,
     ):
-        return Player.query.filter_by(team_uuid=team_uuid).all()
+        return db.session.query(Player).filter_by(team_uuid=team_uuid).all()
 
     def get_player_by_uuid(
         self,       
         player_uuid,
     ):
-        return Player.query.filter_by(uuid=player_uuid).first()
+        return db.session.query(Player).filter_by(uuid=player_uuid).first()
 
     def get_player_by_email(
         self,
         player_email,
     ):
-        return Player.query.filter_by(email=player_email).first()
+        return db.session.query(Player).filter_by(email=player_email).first()
 
     def create_player(
         self,
@@ -71,12 +76,12 @@ class PlayerModelRepository(object):
         team_uuid,
         additional_filters,
     ):
-        total_rows = Player.query.filter_by(team_uuid=team_uuid).count()
+        total_rows = db.session.query(Player).filter_by(team_uuid=team_uuid).count()
         players = db.session.query(Player).filter(
             Player.team_uuid==team_uuid
         )
         if additional_filters.get('lastUuid') != '':
-            from_object = Player.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
+            from_object = db.session.query(Player).filter_by(uuid=additional_filters.get('lastUuid')).first()
         # FILTER BY FIRST NAME OR LAST NAME
         if additional_filters.get('filter') is not None:
             players = players.filter(
@@ -272,5 +277,5 @@ class PlayerModelRepository(object):
         self,
         player,
     ):
-        PlayerFines.query.filter_by(player_uuid=player.uuid).delete()
+        db.session.query(PlayerFines).filter_by(player_uuid=player.uuid).delete()
         db.session.commit()

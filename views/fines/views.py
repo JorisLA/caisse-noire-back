@@ -1,21 +1,21 @@
-from flask.views import MethodView
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    exc, 
-)
+from flask.views import MethodView, View
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
+
 from common.decorators.identification_authorizer import token_required
 from models.repository.team_repository import TeamModelRepository
 from models.repository.fine_repository import FineModelRepository
+from views.base_handler import BaseHandler
 from common.settings import MAX_PER_PAGE
 
 class FineApi(
     MethodView,
+    View,
     FineModelRepository,
     TeamModelRepository,
+    BaseHandler,
 ):
 
     def __init__(
@@ -157,7 +157,3 @@ class FineApi(
         self.response_object['message'] = 'Fine removed!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
-
-
-app.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
-app.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))

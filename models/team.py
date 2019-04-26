@@ -1,18 +1,18 @@
 import uuid
 
-from sqlalchemy.dialects.postgresql import JSON, UUID
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy import bindparam
+from sqlalchemy.sql import text
+from sqlalchemy import Column
+from sqlalchemy import String
 
-from app import db, text, func
-from models.db_base import Base
+from models.db_base import DBBase
 
-class Team(db.Model):
+class Team(DBBase):
     __tablename__ = 'team'
 
-    uuid = db.Column(UUID, primary_key=True)
-    label = db.Column(db.String())
+    uuid = Column(UUID, primary_key=True)
+    label = Column(String)
     players = relationship("Player")
 
     def __init__(

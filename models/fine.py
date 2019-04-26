@@ -1,22 +1,24 @@
 import uuid
 import datetime
 
-from sqlalchemy.dialects.postgresql import JSON, UUID
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-from sqlalchemy import bindparam, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import text
+from sqlalchemy.schema import ForeignKey
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Integer
+from sqlalchemy import DateTime
 
-from app import db, text, func
-from models.db_base import Base
+from models.db_base import DBBase
 
-class Fine(db.Model):
+class Fine(DBBase):
     __tablename__ = 'fine'
 
-    uuid = db.Column(UUID, primary_key=True)
-    label = db.Column(db.String())
-    cost = db.Column(db.Integer())
-    created_date = db.Column(DateTime, default=datetime.datetime.utcnow, index=True)
-    team_uuid = db.Column(UUID, db.ForeignKey('team.uuid'))
+    uuid = Column(UUID, primary_key=True)
+    label = Column(String)
+    cost = Column(Integer)
+    created_date = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    team_uuid = Column(UUID, ForeignKey('team.uuid'))
 
     def __init__(
             self,
