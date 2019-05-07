@@ -3,13 +3,10 @@ import collections
 
 from sqlalchemy import or_, func
 from sqlalchemy.sql import select, text
-from flask_sqlalchemy import SQLAlchemy
 
-# from app import db, text, func
-from models.player import Player, PlayerFines
-from models.fine import Fine
-from flask import current_app
-db = SQLAlchemy(current_app)
+from caisse_noire.models.player import Player, PlayerFines
+from caisse_noire.models.fine import Fine
+from app import db
 
 class PlayerModelRepository(object):
     """
@@ -20,8 +17,6 @@ class PlayerModelRepository(object):
         player,
         fine,
     ):
-        print(player)
-        print(fine)
         association = PlayerFines(player_fines_id=str(uuid.uuid4()))
         association.fine = fine
         player.fines.append(association)

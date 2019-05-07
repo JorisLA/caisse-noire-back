@@ -1,12 +1,11 @@
 import uuid
 
-from flask_sqlalchemy import SQLAlchemy
+from flask import current_app
 
-from models.fine import Fine
-from models.team import Team
-from models.player import PlayerFines
-from __main__ import app
-db = SQLAlchemy(app)
+from caisse_noire.models.fine import Fine
+from caisse_noire.models.team import Team
+from caisse_noire.models.player import PlayerFines
+from app import db
 
 class FineModelRepository(object):
     """

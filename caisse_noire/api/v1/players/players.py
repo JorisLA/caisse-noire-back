@@ -5,18 +5,16 @@ from flask import request, jsonify
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from common.decorators.identification_authorizer import token_required
-from models.repository.player_repository import PlayerModelRepository
-from models.repository.fine_repository import FineModelRepository
-from views.base_handler import BaseHandler
-from common.settings import MAX_PER_PAGE
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from caisse_noire.models.repository.fine_repository import FineModelRepository
+from caisse_noire.common.settings import MAX_PER_PAGE
 
-class PlayerApi(
+class PlayersHandler(
     MethodView,
     View,
     PlayerModelRepository,
     FineModelRepository,
-    BaseHandler
 ):
 
     def __init__(

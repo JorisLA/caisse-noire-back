@@ -2,11 +2,9 @@ import jwt
 
 from functools import wraps
 from flask import request, jsonify, current_app
-from flask_sqlalchemy import SQLAlchemy
 
-from models.player import Player
-from flask import current_app
-db = SQLAlchemy(current_app)
+from caisse_noire.models.player import Player
+from app import db
 
 def token_required(f):
     """

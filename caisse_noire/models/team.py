@@ -6,7 +6,7 @@ from sqlalchemy.sql import text
 from sqlalchemy import Column
 from sqlalchemy import String
 
-from models.db_base import DBBase
+from caisse_noire.models.db_base import DBBase
 
 class Team(DBBase):
     __tablename__ = 'team'

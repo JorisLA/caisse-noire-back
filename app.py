@@ -3,48 +3,50 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_sendgrid import SendGrid
 
-from common.json_encoder import JSONSerializer
+from caisse_noire.common.json_encoder import JSONSerializer
 
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+cors = CORS()
+mail = SendGrid()
+
+from caisse_noire.api.v1.players.players import PlayersHandler
+from caisse_noire.api.v1.players.player import PlayerHandler
+from caisse_noire.api.v1.players.fines import PlayersFinesHandler
+from caisse_noire.api.v1.players.fine import PlayerFineHandler
+from caisse_noire.api.v1.fines.fines import FinesHandler
+from caisse_noire.api.v1.fines.fine import FineHandler
+from caisse_noire.api.v1.players.signin import SigninHandler
+from caisse_noire.api.v1.players.signup import SignupHandler
+from caisse_noire.api.v1.statistics.statistics import StatisticsHandler
+from caisse_noire.api.v1.teams.teams import TeamsHandler
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(os.environ['APP_SETTINGS'])
-    app.config['CORS_HEADERS'] = 'Content-Type'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SENDGRID_API_KEY'] = os.environ.get('SENDGRID_API_KEY')
-    app.config['SENDGRID_DEFAULT_FROM'] = 'admin@caissenoire.com'
 
-    db = SQLAlchemy()
     db.init_app(app)
-
-    # enable CORS
-    cors = CORS(app)
-
-    from views.players.views import PlayerApi
-    app.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
-    app.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))
-    from views.fines.views import FineApi
-    app.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
-    app.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))
-    from views.players_fines.views import BillApi, mail
+    cors.init_app(app)
     mail.init_app(app)
-    app.add_url_rule('/bills', view_func=BillApi.as_view('bills'))
-    app.add_url_rule('/bills/<player_uuid>', view_func=BillApi.as_view('bill'))
-    from views.signin.views import SigninApi, bcrypt
     bcrypt.init_app(app)
-    app.add_url_rule('/signin', view_func=SigninApi.as_view('signin'))
-    from views.signup.views import SignupApi, bcrypt
-    bcrypt.init_app(app)
-    app.add_url_rule('/signup', view_func=SignupApi.as_view('signup'))
-    from views.statistics.views import StatisticApi
-    app.add_url_rule('/statistic', view_func=StatisticApi.as_view('statistics'))
-    from views.teams.views import TeamApi
-    app.add_url_rule('/teams', view_func=TeamApi.as_view('teams'))
+    mail.init_app(app)
+
+    # routes
+    app.add_url_rule('/players', view_func=PlayersHandler.as_view('players'))
+    app.add_url_rule('/players/<player_uuid>', view_func=PlayerHandler.as_view('player'))
+    app.add_url_rule('/players/fines', view_func=PlayersFinesHandler.as_view('players_fines'))
+    app.add_url_rule('/players/<player_uuid>/fine', view_func=PlayerFineHandler.as_view('player_fine'))
+    app.add_url_rule('/fines', view_func=FinesHandler.as_view('fines'))
+    app.add_url_rule('/fines/<fine_uuid>', view_func=FineHandler.as_view('fine'))
+    app.add_url_rule('/players/signin', view_func=SigninHandler.as_view('player_signin'))
+    app.add_url_rule('/players/signup', view_func=SignupHandler.as_view('player_signup'))
+    app.add_url_rule('/statistics', view_func=StatisticsHandler.as_view('statistics'))
+    app.add_url_rule('/teams', view_func=TeamsHandler.as_view('teams'))
 
     return app
 
 if __name__ == '__main__':
-    print(os.environ['APP_SETTINGS'])
     create_app()
-    # app.run()

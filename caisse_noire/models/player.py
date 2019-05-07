@@ -9,7 +9,7 @@ from sqlalchemy import String
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
 
-from models.db_base import DBBase
+from caisse_noire.models.db_base import DBBase
 
 class PlayerFines(DBBase):
     __tablename__ = 'PlayerFines'

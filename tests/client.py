@@ -11,16 +11,19 @@ from app import (
     Player,
     Team
 )
-from models.repository.fine_repository import FineModelRepository
-from models.repository.player_repository import PlayerModelRepository
-from models.repository.team_repository import TeamModelRepository
-from views.players.views import PlayerApi
-from views.fines.views import FineApi
-from views.players_fines.views import BillApi
-from views.signin.views import SigninApi
-from views.signup.views import SignupApi
-from views.teams.views import TeamApi
-from views.statistics.views import StatisticApi
+from caisse_noire.models.repository.fine_repository import FineModelRepository
+from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from caisse_noire.models.repository.team_repository import TeamModelRepository
+from caisse_noire.api.v1.players.players import PlayersHandler
+from caisse_noire.api.v1.players.player import PlayerHandler
+from caisse_noire.api.v1.players.fines import PlayersFinesHandler
+from caisse_noire.api.v1.players.fine import PlayerFineHandler
+from caisse_noire.api.v1.fines.fines import FinesHandler
+from caisse_noire.api.v1.fines.fine import FineHandler
+from caisse_noire.api.v1.players.signin import SigninHandler
+from caisse_noire.api.v1.players.signup import SignupHandler
+from caisse_noire.api.v1.statistics.statistics import StatisticsHandler
+from caisse_noire.api.v1.teams.teams import TeamsHandler
 
 
 class Client():
@@ -34,14 +37,16 @@ class Client():
         self.app_test.config.from_object(os.environ['APP_SETTINGS'])
         # Flask provides a way to test your application by exposing the Werkzeug test Client
         # and handling the context locals for you.
-        self.app_test.add_url_rule('/players', view_func=PlayerApi.as_view('players'))
-        self.app_test.add_url_rule('/players/<player_uuid>', view_func=PlayerApi.as_view('player'))
-        self.app_test.add_url_rule('/signin', view_func=SigninApi.as_view('signin'))
-        self.app_test.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
-        self.app_test.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))
-        self.app_test.add_url_rule('/bills', view_func=BillApi.as_view('bills'))
-        self.app_test.add_url_rule('/bills/<player_uuid>', view_func=BillApi.as_view('bill'))
-        self.app_test.add_url_rule('/signup', view_func=SignupApi.as_view('signup'))
+        self.app_test.add_url_rule('/players', view_func=PlayersHandler.as_view('players'))
+        self.app_test.add_url_rule('/players/<player_uuid>', view_func=PlayerHandler.as_view('player'))
+        self.app_test.add_url_rule('/players/fines', view_func=PlayersFinesHandler.as_view('players_fines'))
+        self.app_test.add_url_rule('/players/<player_uuid>/fine', view_func=PlayerFineHandler.as_view('player_fine'))
+        self.app_test.add_url_rule('/fines', view_func=FinesHandler.as_view('fines'))
+        self.app_test.add_url_rule('/fines/<fine_uuid>', view_func=FineHandler.as_view('fine'))
+        self.app_test.add_url_rule('/players/signin', view_func=SigninHandler.as_view('player_signin'))
+        self.app_test.add_url_rule('/players/signup', view_func=SignupHandler.as_view('player_signup'))
+        self.app_test.add_url_rule('/statistics', view_func=StatisticsHandler.as_view('statistics'))
+        self.app_test.add_url_rule('/teams', view_func=TeamsHandler.as_view('teams'))
         # Establish an application context before running the tests.
         self.ctx = self.app_test.app_context()
 

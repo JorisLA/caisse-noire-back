@@ -3,23 +3,19 @@ import datetime
 
 from flask import request, jsonify, current_app
 from flask.views import MethodView, View
-from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from common.decorators.identification_authorizer import token_required
-from models.repository.team_repository import TeamModelRepository
-from models.repository.player_repository import PlayerModelRepository
-from views.base_handler import BaseHandler
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.team_repository import TeamModelRepository
+from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from app import bcrypt
 
-bcrypt = Bcrypt()
-
-class SigninApi(
+class SigninHandler(
     MethodView,
     View,
     TeamModelRepository,
     PlayerModelRepository,
-    BaseHandler,
 ):
 
     def __init__(

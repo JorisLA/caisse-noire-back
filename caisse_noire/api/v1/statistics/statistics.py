@@ -5,15 +5,13 @@ from flask import request, jsonify
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from common.decorators.identification_authorizer import token_required
-from models.repository.team_repository import TeamModelRepository
-from views.base_handler import BaseHandler
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.team_repository import TeamModelRepository
 
-class StatisticApi(
+class StatisticsHandler(
     MethodView,
     View,
     TeamModelRepository,
-    BaseHandler,
 ):
 
     def __init__(
