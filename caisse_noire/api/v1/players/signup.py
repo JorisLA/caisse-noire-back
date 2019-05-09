@@ -12,6 +12,7 @@ from caisse_noire.models.repository.player_repository import PlayerModelReposito
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from app import bcrypt
 
+
 class SignupHandler(
     MethodView,
     View,
@@ -31,7 +32,8 @@ class SignupHandler(
         **kwargs
     ):
         post_data = request.get_json()
-        pw_hash = bcrypt.generate_password_hash(post_data['password']).decode('utf-8')
+        pw_hash = bcrypt.generate_password_hash(
+            post_data['password']).decode('utf-8')
         if 'add_team' in post_data:
             banker = True
             team_uuid = self.create_team(team_name=post_data['add_team'])
@@ -43,19 +45,4 @@ class SignupHandler(
         post_data['banker'] = banker
         post_data['team_uuid'] = team_uuid
         player_uuid = self.create_player(post_data)
-        token = jwt.encode(
-            {
-                'public_id' : player_uuid,
-                'team_uuid' : team_uuid,
-                'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-            },
-            current_app.config['SECRET_KEY']
-        )
-
-        return jsonify(
-                {
-                    'token' : token.decode('UTF-8'),
-                    'banker' : banker,
-                }
-            )
-        # return '', 204
+        return '', 204
