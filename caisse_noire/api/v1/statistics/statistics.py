@@ -1,19 +1,16 @@
 import uuid
 
-from flask.views import MethodView
+from flask.views import MethodView, View
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    exc,
-)
-from common.decorators.identification_authorizer import token_required
-from models.repository.team_repository import TeamModelRepository
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.team_repository import TeamModelRepository
 
-class StatisticApi(
+class StatisticsHandler(
     MethodView,
+    View,
     TeamModelRepository,
 ):
 
@@ -46,5 +43,3 @@ class StatisticApi(
             return jsonify({'message' : 'No statistic'}), 404
 
         return jsonify(self.response_object), 200
-
-app.add_url_rule('/statistic', view_func=StatisticApi.as_view('statistics'))

@@ -12,18 +12,21 @@ from app import (
     Team
 )
 from tests.client import Client, AdminClient
-from models.repository.fine_repository import FineModelRepository
-from models.repository.player_repository import PlayerModelRepository
-from models.repository.team_repository import TeamModelRepository
-from models.fine import Fine
-from models.player import PlayerFines
-from views.players.views import PlayerApi
-from views.fines.views import FineApi
-from views.players_fines.views import BillApi
-from views.signin.views import SigninApi
-from views.signup.views import SignupApi
-from views.teams.views import TeamApi
-from views.statistics.views import StatisticApi
+from caisse_noire.models.repository.fine_repository import FineModelRepository
+from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from caisse_noire.models.repository.team_repository import TeamModelRepository
+from caisse_noire.models.fine import Fine
+from caisse_noire.models.player import PlayerFines
+from caisse_noire.api.v1.players.players import PlayersHandler
+from caisse_noire.api.v1.players.player import PlayerHandler
+from caisse_noire.api.v1.players.fines import PlayersFinesHandler
+from caisse_noire.api.v1.players.fine import PlayerFineHandler
+from caisse_noire.api.v1.fines.fines import FinesHandler
+from caisse_noire.api.v1.fines.fine import FineHandler
+from caisse_noire.api.v1.players.signin import SigninHandler
+from caisse_noire.api.v1.players.signup import SignupHandler
+from caisse_noire.api.v1.statistics.statistics import StatisticsHandler
+from caisse_noire.api.v1.teams.teams import TeamsHandler
 
 class PopulateDatabaseAsAdmin(AdminClient):
     """

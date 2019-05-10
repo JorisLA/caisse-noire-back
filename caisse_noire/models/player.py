@@ -1,35 +1,37 @@
 import uuid
 import datetime
 
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy import bindparam, DateTime
+from sqlalchemy.schema import ForeignKey
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Boolean
+from sqlalchemy import DateTime
 
-from app import db, text, func
-from models.db_base import Base
+from caisse_noire.models.db_base import DBBase
 
-
-class PlayerFines(db.Model):
+class PlayerFines(DBBase):
     __tablename__ = 'PlayerFines'
 
-    player_uuid = db.Column(UUID, db.ForeignKey('player.uuid'))
-    fine_uuid = db.Column(UUID, db.ForeignKey('fine.uuid'))
-    player_fines_id = db.Column(UUID, primary_key=True)
+    player_uuid = Column(UUID, ForeignKey('player.uuid'))
+    fine_uuid = Column(UUID, ForeignKey('fine.uuid'))
+    player_fines_id = Column(UUID, primary_key=True)
 
     fine = relationship("Fine", cascade="all,delete", backref="Fine")
 
-class Player(db.Model):
+class Player(DBBase):
     __tablename__ = 'player'
 
-    uuid = db.Column(UUID, primary_key=True)
-    first_name = db.Column(db.String())
-    last_name = db.Column(db.String())
-    email = db.Column(db.String())
-    banker = db.Column(db.Boolean(), unique=False, default=True)
-    password = db.Column(db.String())
-    team_uuid = db.Column(UUID, db.ForeignKey('team.uuid'))
+    uuid = Column(UUID, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    email = Column(String)
+    banker = Column(Boolean, unique=False, default=True)
+    password = Column(String)
+    team_uuid = Column(UUID, ForeignKey('team.uuid'))
     fines = relationship("PlayerFines", cascade="all,delete", backref="Fine")
-    created_date = db.Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    created_date = Column(DateTime, default=datetime.datetime.utcnow, index=True)
 
     def __init__(
             self,

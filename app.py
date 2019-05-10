@@ -1,44 +1,52 @@
 import os
 
-from flask import Flask, jsonify, request, g, session, make_response
-from flask_cors import CORS, cross_origin
-from flask_bcrypt import Bcrypt
+from flask import Flask
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
 from flask_sendgrid import SendGrid
-from sqlalchemy import func, exc
-from functools import wraps
-from sqlalchemy.sql import text
 
-from common.json_encoder import JSONSerializer
+from caisse_noire.common.json_encoder import JSONSerializer
 
-# instantiate the app
-app = Flask(__name__)
-app.config.from_object(os.environ['APP_SETTINGS'])
-app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SENDGRID_API_KEY'] = os.environ.get('SENDGRID_API_KEY')
-app.config['SENDGRID_DEFAULT_FROM'] = 'admin@caissenoire.com'
-""" app.json_encoder = JSONSerializer """
-""" app.config['SQLALCHEMY_ECHO'] = True """
-mail = SendGrid(app)
-db = SQLAlchemy(app)
-from models.player import Player, PlayerFines
-from models.team import Team
-from models.fine import Fine
-# enable CORS
-cors = CORS(app)
-# enable Bcrypt for password encryption
-bcrypt = Bcrypt(app)
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+cors = CORS()
+mail = SendGrid()
 
-import views.players.views
-import views.fines.views
-import views.players_fines.views
-import views.signin.views
-import views.signup.views
-import views.teams.views
-import views.statistics.views
+from caisse_noire.api.v1.players.players import PlayersHandler
+from caisse_noire.api.v1.players.player import PlayerHandler
+from caisse_noire.api.v1.players.fines import PlayersFinesHandler
+from caisse_noire.api.v1.players.fine import PlayerFineHandler
+from caisse_noire.api.v1.fines.fines import FinesHandler
+from caisse_noire.api.v1.fines.fine import FineHandler
+from caisse_noire.api.v1.players.signin import SigninHandler
+from caisse_noire.api.v1.players.signup import SignupHandler
+from caisse_noire.api.v1.statistics.statistics import StatisticsHandler
+from caisse_noire.api.v1.teams.teams import TeamsHandler
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(os.environ['APP_SETTINGS'])
+
+    db.init_app(app)
+    cors.init_app(app)
+    mail.init_app(app)
+    bcrypt.init_app(app)
+    mail.init_app(app)
+
+    # routes
+    app.add_url_rule('/players', view_func=PlayersHandler.as_view('players'))
+    app.add_url_rule('/players/<player_uuid>', view_func=PlayerHandler.as_view('player'))
+    app.add_url_rule('/players/fines', view_func=PlayersFinesHandler.as_view('players_fines'))
+    app.add_url_rule('/players/<player_uuid>/fine', view_func=PlayerFineHandler.as_view('player_fine'))
+    app.add_url_rule('/fines', view_func=FinesHandler.as_view('fines'))
+    app.add_url_rule('/fines/<fine_uuid>', view_func=FineHandler.as_view('fine'))
+    app.add_url_rule('/players/signin', view_func=SigninHandler.as_view('player_signin'))
+    app.add_url_rule('/players/signup', view_func=SignupHandler.as_view('player_signup'))
+    app.add_url_rule('/statistics', view_func=StatisticsHandler.as_view('statistics'))
+    app.add_url_rule('/teams', view_func=TeamsHandler.as_view('teams'))
+
+    return app
 
 if __name__ == '__main__':
-    print(os.environ['APP_SETTINGS'])
-    app.run()
-
+    create_app()

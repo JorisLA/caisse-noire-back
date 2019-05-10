@@ -1,18 +1,19 @@
 import uuid
 
 from flask.views import MethodView
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from flask.views import View
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify
-)
-from common.decorators.identification_authorizer import token_required
-from models.repository.team_repository import TeamModelRepository
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.team_repository import TeamModelRepository
+from caisse_noire.models.team import Team
+from app import db
 
-class TeamApi(
+
+class TeamsHandler(
     MethodView,
+    View,
     TeamModelRepository,
 ):
 
@@ -36,7 +37,6 @@ class TeamApi(
         db.session.commit()
         return '', 204
 
-
     @cross_origin()
     def get(
         self,
@@ -46,5 +46,3 @@ class TeamApi(
         self.response_object = {}
         self.response_object['teams'] = self.get_teams()
         return jsonify(self.response_object)
-
-app.add_url_rule('/teams', view_func=TeamApi.as_view('teams'))

@@ -1,9 +1,11 @@
 import uuid
 
-from app import db, text, func
-from models.fine import Fine
-from models.team import Team
-from models.player import PlayerFines
+from flask import current_app
+
+from caisse_noire.models.fine import Fine
+from caisse_noire.models.team import Team
+from caisse_noire.models.player import PlayerFines
+from app import db
 
 class FineModelRepository(object):
     """
@@ -13,7 +15,7 @@ class FineModelRepository(object):
         self,
         fine_uuid,
     ):
-        return Fine.query.filter_by(uuid=fine_uuid).first()
+        return db.session.query(Fine).filter_by(uuid=fine_uuid).first()
 
     def get_all_fines_by_team(
         self,
@@ -30,13 +32,13 @@ class FineModelRepository(object):
                 'fines' : fines,
             }
         else:
-            total_rows = Fine.query.filter_by(team_uuid=team_uuid).count()
+            total_rows = db.session.query(Fine).filter_by(team_uuid=team_uuid).count()
             fines = db.session.query(Fine
                 ).filter(
                     Fine.team_uuid==team_uuid
                 )
             if additional_filters.get('lastUuid') != '':
-                from_object = Fine.query.filter_by(uuid=additional_filters.get('lastUuid')).first()
+                from_object = db.session.query(Fine).filter_by(uuid=additional_filters.get('lastUuid')).first()
             # FILTER BY LABEL
             if additional_filters.get('filter'):
                 fines = fines.filter(
@@ -101,7 +103,7 @@ class FineModelRepository(object):
         self,
         fine,
     ):
-        PlayerFines.query.filter(PlayerFines.fine_uuid==fine.uuid).delete()
+        db.session.query(PlayerFines).filter(PlayerFines.fine_uuid==fine.uuid).delete()
         db.session.commit()
         db.session.delete(fine)
         db.session.commit()

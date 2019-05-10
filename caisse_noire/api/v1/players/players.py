@@ -1,21 +1,20 @@
-from flask.views import MethodView
+import uuid
 
-from app import (
-    cross_origin,
-    app,
-    request,
-    jsonify,
-    exc, 
-)
-from common.decorators.identification_authorizer import token_required
-from models.repository.team_repository import TeamModelRepository
-from models.repository.fine_repository import FineModelRepository
-from common.settings import MAX_PER_PAGE
+from flask.views import MethodView, View
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
+from sqlalchemy import exc
 
-class FineApi(
+from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from caisse_noire.models.repository.fine_repository import FineModelRepository
+from caisse_noire.common.settings import MAX_PER_PAGE
+
+class PlayersHandler(
     MethodView,
+    View,
+    PlayerModelRepository,
     FineModelRepository,
-    TeamModelRepository,
 ):
 
     def __init__(
@@ -31,29 +30,17 @@ class FineApi(
         **kwargs
     ):
         post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'The current user is not authorized'}), 403
-
-        if not post_data:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Empty data sent in the request'}), 400
-
-        team = self.get_team_by_uuid(team_uuid=kwargs['current_user'].team_uuid)
-        if not team:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Team not found'}), 404
-        try:
-            self.create_fine(
-                post_data=post_data,
-                team=team,
-            )
-        except exc.SQLAlchemyError as error:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Internal server error'}), 500
-
-        self.response_object['message'] = 'Fine added!'
+        #db = get_db()
+        #db.execute(
+        #    'insert into players (uuid, first_name, last_name) values (?, ?, ?)',
+        #        [
+        #            str(uuid.uuid4()),
+        #            post_data['first_name'],
+        #            post_data['last_name']
+        #        ]
+        #)
+        #db.commit()
+        self.response_object['message'] = 'Player added!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 201
 
@@ -65,6 +52,8 @@ class FineApi(
         *args,
         **kwargs
     ):
+        PLAYERS = []
+        FINES = []
         additional_filters = {
             'sort':request.args.get('_sort', None),
             'order':request.args.get('_order', None),
@@ -74,23 +63,28 @@ class FineApi(
             'lastUuid':request.args.get('_lastUuid', None),
         }
         try:
+            results = self.get_all_players_from_team(
+                team_uuid=kwargs['current_user'].team_uuid,
+                additional_filters=additional_filters
+            )
+            self.response_object['players'] = [
+                player.to_dict()
+                for player in results['players']
+            ]
+            self.response_object['full_count'] = results['total_rows']
             results = self.get_all_fines_by_team(
                 team_uuid=kwargs['current_user'].team_uuid,
                 additional_filters=additional_filters,
+                for_player_view=True,
             )
             self.response_object['fines'] = [
-                fine.to_dict()
+                fine.to_dict(for_player_view=True)
                 for fine in results['fines']
             ]
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
-        # if not self.response_object['fines']:
-        #     self.response_object['status'] = 'failure'
-        #     return jsonify({'message' : 'No fines or wrong team uuid'}), 404
-
-        self.response_object['status'] = 'success'
         return jsonify(self.response_object), 200
 
 
@@ -98,7 +92,7 @@ class FineApi(
     @token_required
     def put(
         self,
-        fine_uuid,
+        player_uuid,
         *args,
         **kwargs
     ):
@@ -107,31 +101,34 @@ class FineApi(
         if not kwargs['current_user'].banker:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'The current user is not authorized'}), 403
-        
-        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
-        if not fine:
+
+        player = self.get_player_by_uuid(player_uuid=player_uuid)
+        if not player:
             self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Fine not found'}), 404
+            return jsonify({'message' : 'Player not found'}), 404
 
         try:
-            self.update_fine(
-                post_data=post_data,
-                fine=fine,
-            )
+            if 'fine_uuid' in post_data:
+                fine = self.get_fine_by_uuid(fine_uuid=post_data['fine_uuid'])
+                if not fine:
+                    self.response_object['status'] = 'failure'
+                    return jsonify({'message' : 'Fine not found'}), 404
+                self.response_object['player'] = self.update_player_fine(player, fine)
+            self.response_object['message'] = 'Player updated!'
         except exc.SQLAlchemyError as error:
+            print(error)
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
-        self.response_object['message'] = 'Fine updated!'
         self.response_object['status'] = 'success'
-        return jsonify(self.response_object), 204
+        return jsonify({'total':self.response_object['player']['total']}), 200
 
 
     @cross_origin()
     @token_required
     def delete(
         self,
-        fine_uuid,
+        player_uuid,
         *args,
         **kwargs
     ):
@@ -141,23 +138,19 @@ class FineApi(
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'The current user is not authorized'}), 403
 
-        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
-        if not fine:
+        player = self.get_player_by_uuid(player_uuid=player_uuid)
+        if not player:
             self.response_object['status'] = 'failure'
-            return jsonify({'message' : 'Fine not found'}), 404
+            return jsonify({'message' : 'Player not found'}), 404
 
         try:
             self.delete_fine(
-                fine=fine,
+                player=player,
             )
         except exc.SQLAlchemyError as error:
             self.response_object['status'] = 'failure'
             return jsonify({'message' : 'Internal server error'}), 500
 
-        self.response_object['message'] = 'Fine removed!'
+        self.response_object['message'] = 'Player removed!'
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
-
-
-app.add_url_rule('/fines', view_func=FineApi.as_view('fines'))
-app.add_url_rule('/fines/<fine_uuid>', view_func=FineApi.as_view('fine'))
