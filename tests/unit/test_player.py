@@ -1,3 +1,6 @@
+"""
+Unit test for player model
+"""
 def test_new_player(new_player_banker):
     """
     GIVEN a User model
@@ -10,7 +13,7 @@ def test_new_player(new_player_banker):
     assert new_player_banker.uuid
     assert new_player_banker.team_uuid
     assert new_player_banker.password
-    assert new_player_banker.banker == True
+    assert new_player_banker.banker is True
     assert not new_player_banker.fines
 
 def test_new_player_fine_association(new_player_fine_association):

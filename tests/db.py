@@ -4,29 +4,19 @@ import jwt
 import datetime
 
 from app import (
-    Flask,
-    os,
     db,
     bcrypt,
-    Player,
-    Team
 )
+from caisse_noire.models.player import Player
+from caisse_noire.models.team import Team
+
 from tests.client import Client, AdminClient
+
 from caisse_noire.models.repository.fine_repository import FineModelRepository
 from caisse_noire.models.repository.player_repository import PlayerModelRepository
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from caisse_noire.models.fine import Fine
 from caisse_noire.models.player import PlayerFines
-from caisse_noire.api.v1.players.players import PlayersHandler
-from caisse_noire.api.v1.players.player import PlayerHandler
-from caisse_noire.api.v1.players.fines import PlayersFinesHandler
-from caisse_noire.api.v1.players.fine import PlayerFineHandler
-from caisse_noire.api.v1.fines.fines import FinesHandler
-from caisse_noire.api.v1.fines.fine import FineHandler
-from caisse_noire.api.v1.players.signin import SigninHandler
-from caisse_noire.api.v1.players.signup import SignupHandler
-from caisse_noire.api.v1.statistics.statistics import StatisticsHandler
-from caisse_noire.api.v1.teams.teams import TeamsHandler
 
 class PopulateDatabaseAsAdmin(AdminClient):
     """
@@ -37,6 +27,7 @@ class PopulateDatabaseAsAdmin(AdminClient):
             uuid=str(uuid.uuid4()),
             label='fine name',
             cost=5,
+            team_uuid=self.team_uuid,
         )
         db.session.add(fine)
         db.session.commit()
@@ -56,4 +47,3 @@ class PopulateDatabaseAsAdmin(AdminClient):
             player_fines.player_fines_id = str(uuid.uuid4())
             db.session.add(player_fines)
             db.session.commit()
-

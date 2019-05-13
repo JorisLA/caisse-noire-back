@@ -1,28 +1,22 @@
+"""
+Create ressources for tests
+"""
 import uuid
 import pytest
-import jwt
-import datetime
 
 from app import (
-    Flask,
-    os,
     db,
     bcrypt,
-    Player,
-    Team,
-    Fine,
-    PlayerFines,
 )
-from views.players.views import PlayerApi
-from views.fines.views import FineApi
-from views.players_fines.views import BillApi
-from views.signin.views import SigninApi
-from views.signup.views import SignupApi
-from views.teams.views import TeamApi
-from views.statistics.views import StatisticApi
+from caisse_noire.models.player import Player
+from caisse_noire.models.team import Team
+from caisse_noire.models.fine import Fine
+from caisse_noire.models.repository.player_repository import PlayerFines
+
 from tests.db import PopulateDatabaseAsAdmin
 from tests.client import Client
- 
+
+
 class HttpClient(PopulateDatabaseAsAdmin):
     pass
 
@@ -54,6 +48,7 @@ def new_fine():
         uuid=str(uuid.uuid4()),
         label='fine name',
         cost=5,
+        team_uuid=str(uuid.uuid4()),
     )
     return fine
 
@@ -72,9 +67,9 @@ def banker():
     client.add_players_from_team()
 
     yield client  # this is where the testing happens!
- 
+
     client.ctx.pop()
-    #db.drop_all()
+    # db.drop_all()
 
 @pytest.fixture(scope='module')
 def simple_client():
@@ -83,4 +78,4 @@ def simple_client():
     yield simple_client
 
     simple_client.ctx.pop()
-    db.drop_all()
+    # db.drop_all()

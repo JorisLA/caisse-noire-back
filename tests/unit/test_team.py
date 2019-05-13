@@ -1,3 +1,6 @@
+"""
+Unit test for team model
+"""
 def test_new_team(new_team):
     """
     GIVEN a Team model

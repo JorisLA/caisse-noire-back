@@ -8,9 +8,9 @@ from app import (
     os,
     db,
     bcrypt,
-    Player,
-    Team
 )
+from caisse_noire.models.player import Player
+from caisse_noire.models.team import Team
 from caisse_noire.models.repository.fine_repository import FineModelRepository
 from caisse_noire.models.repository.player_repository import PlayerModelRepository
 from caisse_noire.models.repository.team_repository import TeamModelRepository
@@ -54,6 +54,9 @@ class Client():
 
         db.init_app(self.app_test)
         db.create_all()
+
+    # def on_finish(self):
+    #     self.db.close_session()
 
 
 class AdminClient(Client):

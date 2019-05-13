@@ -47,6 +47,3 @@ def create_app():
     app.add_url_rule('/teams', view_func=TeamsHandler.as_view('teams'))
 
     return app
-
-if __name__ == '__main__':
-    create_app()
