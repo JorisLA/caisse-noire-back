@@ -7,6 +7,7 @@ from caisse_noire.common.decorators.identification_authorizer import token_requi
 from caisse_noire.models.repository.player_repository import PlayerModelRepository
 from app import mail
 
+
 class PlayerFineHandler(
     MethodView,
     View,
@@ -26,7 +27,9 @@ class PlayerFineHandler(
         *args,
         **kwargs
     ):
-        self.response_object['fines']  = self.get_player_fines(player_uuid=player_uuid)
+        self.response_object['fines'] = self.get_player_fines(
+            player_uuid=player_uuid
+        )
         return jsonify(self.response_object), 200
 
     @cross_origin()

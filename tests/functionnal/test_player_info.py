@@ -1,13 +1,14 @@
-def test_player_fines(banker):
-    """
-    GIVEN a Flask application
-    WHEN the '/get' page is requested (GET)
-    THEN check the response is valid
-    """
-    response = banker.test_client.get('/bills/{}'.format(banker.player_uuid),
-         headers={
-            'x-access-token':banker.token
+from tests.functionnal import auth_for
+
+
+def test_get_player_fines_empty(client, banker):
+    response = client.get(
+        '/players/{}/fine'.format(banker.uuid),
+        headers={
+            'x-access-token': auth_for(banker)
         }
     )
-    print(response.get_json())
-    #assert response.status_code == 200
+    value = response.get_json()['fines']
+    assert isinstance(value, dict)
+    assert not value
+    assert response.status_code == 200

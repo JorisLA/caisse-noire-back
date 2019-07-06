@@ -7,8 +7,10 @@ from sqlalchemy import Column
 from sqlalchemy import String
 
 from caisse_noire.models.db_base import DBBase
+from database import db
 
-class Team(DBBase):
+
+class Team(db.Model):
     __tablename__ = 'team'
 
     uuid = Column(UUID, primary_key=True)

@@ -10,14 +10,17 @@ from sqlalchemy import Integer
 from sqlalchemy import DateTime
 
 from caisse_noire.models.db_base import DBBase
+from database import db
 
-class Fine(DBBase):
+
+class Fine(db.Model):
     __tablename__ = 'fine'
 
     uuid = Column(UUID, primary_key=True)
     label = Column(String)
     cost = Column(Integer)
-    created_date = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    created_date = Column(
+        DateTime, default=datetime.datetime.utcnow, index=True)
     team_uuid = Column(UUID, ForeignKey('team.uuid'))
 
     def __init__(

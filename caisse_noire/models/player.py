@@ -10,8 +10,10 @@ from sqlalchemy import Boolean
 from sqlalchemy import DateTime
 
 from caisse_noire.models.db_base import DBBase
+from database import db
 
-class PlayerFines(DBBase):
+
+class PlayerFines(db.Model):
     __tablename__ = 'PlayerFines'
 
     player_uuid = Column(UUID, ForeignKey('player.uuid'))
@@ -20,7 +22,8 @@ class PlayerFines(DBBase):
 
     fine = relationship("Fine", cascade="all,delete", backref="Fine")
 
-class Player(DBBase):
+
+class Player(db.Model):
     __tablename__ = 'player'
 
     uuid = Column(UUID, primary_key=True)
@@ -31,7 +34,8 @@ class Player(DBBase):
     password = Column(String)
     team_uuid = Column(UUID, ForeignKey('team.uuid'))
     fines = relationship("PlayerFines", cascade="all,delete", backref="Fine")
-    created_date = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    created_date = Column(
+        DateTime, default=datetime.datetime.utcnow, index=True)
 
     def __init__(
             self,
@@ -51,7 +55,7 @@ class Player(DBBase):
         self.team_uuid = team_uuid
         self.password = password
 
-    #def __repr__(self):
+    # def __repr__(self):
     #    return '<uuid {}>'.format(self.uuid)
 
     def to_dict(self):

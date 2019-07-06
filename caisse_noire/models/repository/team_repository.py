@@ -7,6 +7,7 @@ from caisse_noire.models.fine import Fine
 from caisse_noire.models.player import Player, PlayerFines
 from app import db
 
+
 class TeamModelRepository(object):
     """
     """
@@ -43,21 +44,21 @@ class TeamModelRepository(object):
         team_uuid,
     ):
         result = db.session.query(
-                func.sum(Fine.cost),
-                Player.first_name,
-                Player.last_name,
-                Player.uuid
-            ).join(
-                PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
-            ).join(
-                Player, (PlayerFines.player_uuid==Player.uuid)
-            ).filter(
-                Fine.team_uuid==team_uuid,
-            ).group_by(
-                Player.uuid
-            ).order_by(
-                func.sum(Fine.cost).desc()
-            ).first()
+            func.sum(Fine.cost),
+            Player.first_name,
+            Player.last_name,
+            Player.uuid
+        ).join(
+            PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
+        ).join(
+            Player, (PlayerFines.player_uuid == Player.uuid)
+        ).filter(
+            Fine.team_uuid == team_uuid,
+        ).group_by(
+            Player.uuid
+        ).order_by(
+            func.sum(Fine.cost).desc()
+        ).first()
         if result:
             return {
                 'total': result[0],
@@ -72,17 +73,17 @@ class TeamModelRepository(object):
         team_uuid,
     ):
         result = db.session.query(
-                Fine.label,
-                func.count(PlayerFines.fine_uuid)
-            ).join(
-                PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
-            ).filter(
-                Fine.team_uuid==team_uuid,
-            ).group_by(
-                Fine.label
-            ).order_by(
-                func.count(PlayerFines.fine_uuid).desc()
-            ).first()
+            Fine.label,
+            func.count(PlayerFines.fine_uuid)
+        ).join(
+            PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
+        ).filter(
+            Fine.team_uuid == team_uuid,
+        ).group_by(
+            Fine.label
+        ).order_by(
+            func.count(PlayerFines.fine_uuid).desc()
+        ).first()
         if result:
             return {
                 'label': result[0],

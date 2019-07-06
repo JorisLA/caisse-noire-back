@@ -6,7 +6,15 @@ from sqlalchemy.sql import select, text
 
 from caisse_noire.models.player import Player, PlayerFines
 from caisse_noire.models.fine import Fine
+from caisse_noire.models.repository.team_repository import TeamModelRepository
 from app import db
+from caisse_noire.common.password import Passwords
+from caisse_noire.common.exceptions.database_exceptions import (
+    DatabaseError,
+    ModelCreationError,
+    ModelUpdateError,
+)
+
 
 class PlayerModelRepository(object):
     """
@@ -30,7 +38,7 @@ class PlayerModelRepository(object):
         return db.session.query(Player).filter_by(team_uuid=team_uuid).all()
 
     def get_player_by_uuid(
-        self,       
+        self,
         player_uuid,
     ):
         return db.session.query(Player).filter_by(uuid=player_uuid).first()
@@ -46,18 +54,48 @@ class PlayerModelRepository(object):
         player_info,
     ):
         player_uuid = str(uuid.uuid4())
+
+        password = player_info.get('password', None)
+        if password is None:
+            raise ModelCreationError(
+                error_code='missing_parameter',
+                params='password',
+            )
+
+        if not Passwords.is_password_valid(password):
+            raise ModelCreationError(error_code='invalid_password')
+
+        if 'add_team' in player_info:
+            banker = True
+            team_uuid = TeamModelRepository.create_team(
+                self,
+                team_name=player_info['add_team'],
+            )
+        else:
+            team_uuid = player_info['get_team']
+            team = TeamModelRepository.get_team_by_uuid(
+                self,
+                team_uuid=team_uuid,
+            )
+            banker = False
+
         player = Player(
             uuid=player_uuid,
             first_name=player_info['first_name'],
             last_name=player_info['last_name'],
             email=player_info['email'],
-            password=player_info['pw_hash'],
-            banker=player_info['banker'],
-            team_uuid=player_info['team_uuid'],
+            password=Passwords.hash_password(password),
+            banker=banker,
+            team_uuid=team_uuid,
         )
+
         db.session.add(player)
         db.session.commit()
-        return player_uuid
+
+        return {
+            "player_uuid": player_uuid,
+            "team_uuid": team_uuid
+        }
 
     def delete_player(
         self,
@@ -71,29 +109,33 @@ class PlayerModelRepository(object):
         team_uuid,
         additional_filters,
     ):
-        total_rows = db.session.query(Player).filter_by(team_uuid=team_uuid).count()
+        total_rows = db.session.query(Player).filter_by(
+            team_uuid=team_uuid).count()
         players = db.session.query(Player).filter(
-            Player.team_uuid==team_uuid
+            Player.team_uuid == team_uuid
         )
         if additional_filters.get('lastUuid') != '':
-            from_object = db.session.query(Player).filter_by(uuid=additional_filters.get('lastUuid')).first()
+            from_object = db.session.query(Player).filter_by(
+                uuid=additional_filters.get('lastUuid')).first()
         # FILTER BY FIRST NAME OR LAST NAME
         if additional_filters.get('filter') is not None:
             players = players.filter(
                 or_(
-                    Player.first_name.ilike('%%%s%%' % additional_filters.get('filter')),
-                    Player.last_name.ilike('%%%s%%' % additional_filters.get('filter')),
+                    Player.first_name.ilike('%%%s%%' %
+                                            additional_filters.get('filter')),
+                    Player.last_name.ilike('%%%s%%' %
+                                           additional_filters.get('filter')),
                 )
             )
             return {
-                'players' : players,
-                'total_rows' : total_rows,
+                'players': players,
+                'total_rows': total_rows,
             }
-
 
         # FIRST PAGE
         if int(additional_filters.get('currentPage')) == 1:
-            players = players.order_by(Player.created_date.asc()).limit(int(additional_filters.get('perPage')))
+            players = players.order_by(Player.created_date.asc()).limit(
+                int(additional_filters.get('perPage')))
         else:
             players = players.filter(
                 Player.created_date > from_object.created_date
@@ -103,8 +145,8 @@ class PlayerModelRepository(object):
                 int(additional_filters.get('perPage'))
             )
         return {
-            'players' : players,
-            'total_rows' : total_rows,
+            'players': players,
+            'total_rows': total_rows,
         }
 
     def get_players(
@@ -199,7 +241,7 @@ class PlayerModelRepository(object):
                         ORDER BY {0} {1}
                         OFFSET :_offset
                     """.format(_sort, _order)
-                query = text(_query)            
+                query = text(_query)
                 results = db.engine.execute(
                     query,
                     team_uuid=team_uuid,
@@ -236,12 +278,12 @@ class PlayerModelRepository(object):
     def get_player_fines(
         self,
         player_uuid,
-    ):     
+    ):
         result = []
         fines = db.session.query(
-                PlayerFines
-            ).filter(PlayerFines.player_uuid==player_uuid)
-        for fine in fines:    
+            PlayerFines
+        ).filter(PlayerFines.player_uuid == player_uuid)
+        for fine in fines:
             result.append(
                 fine.fine.label,
             )
@@ -255,10 +297,10 @@ class PlayerModelRepository(object):
         return db.session.query(
             func.sum(Fine.cost)
         ).join(
-            PlayerFines, (Fine.uuid==PlayerFines.fine_uuid)
+            PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
         ).join(
-            Player, (Player.uuid==PlayerFines.player_uuid)
-        ).filter(PlayerFines.player_uuid==player_uuid).order_by(func.sum(Fine.cost)).limit(1).scalar()
+            Player, (Player.uuid == PlayerFines.player_uuid)
+        ).filter(PlayerFines.player_uuid == player_uuid).order_by(func.sum(Fine.cost)).limit(1).scalar()
 
     def delete_players_fines(
         self,
@@ -272,5 +314,6 @@ class PlayerModelRepository(object):
         self,
         player,
     ):
-        db.session.query(PlayerFines).filter_by(player_uuid=player.uuid).delete()
+        db.session.query(PlayerFines).filter_by(
+            player_uuid=player.uuid).delete()
         db.session.commit()
