@@ -63,18 +63,6 @@ def banker(db_session):
     return user
 
 
-@pytest.fixture(scope="function")
-def account_creation(db_session):
-    return True
-
-
-@pytest.fixture(scope="function")
-def account_creation_player(db_session):
-    team = teams.test_team()
-    db_session.add(team)
-    db_session.commit()
-    return team
-
 # @pytest.fixture(scope='module')
 # def new_player_banker():
 #     pw_hash = bcrypt.generate_password_hash('thisismypassword')

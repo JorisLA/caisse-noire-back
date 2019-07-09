@@ -1,6 +1,7 @@
 import uuid
 import collections
 
+from flask import jsonify
 from sqlalchemy import or_, func
 from sqlalchemy.sql import select, text
 
@@ -13,7 +14,9 @@ from caisse_noire.common.exceptions.database_exceptions import (
     DatabaseError,
     ModelCreationError,
     ModelUpdateError,
+    EntityNotFound,
 )
+from caisse_noire.common.uuid_checker import is_uuid
 
 
 class PlayerModelRepository(object):
@@ -49,18 +52,35 @@ class PlayerModelRepository(object):
     ):
         return db.session.query(Player).filter_by(email=player_email).first()
 
-    def create_player(
+    def signup_player(
         self,
         player_info,
     ):
         player_uuid = str(uuid.uuid4())
 
         password = player_info.get('password', None)
-        if password is None:
-            raise ModelCreationError(
-                error_code='missing_parameter',
-                params='password',
+        first_name = player_info.get('first_name', None)
+        last_name = player_info.get('last_name', None)
+        email = player_info.get('email', None)
+        add_team = player_info.get('add_team', None)
+        team_uuid = player_info.get('get_team', None)
+
+        if (
+            (password is None or not password) or
+            (first_name is None or not first_name) or
+            (last_name is None or not last_name) or
+            (email is None or not email) or
+            (
+                (add_team is None) and (team_uuid is None)
             )
+        ):
+            raise ModelCreationError(error_code='missing_parameter')
+
+        if (
+            (add_team is not None and not add_team) or
+            (team_uuid is not None and not is_uuid(team_uuid))
+        ):
+            raise ModelCreationError(error_code='invalid_parameter')
 
         if not Passwords.is_password_valid(password):
             raise ModelCreationError(error_code='invalid_password')
@@ -69,21 +89,22 @@ class PlayerModelRepository(object):
             banker = True
             team_uuid = TeamModelRepository.create_team(
                 self,
-                team_name=player_info['add_team'],
+                team_name=add_team,
             )
         else:
-            team_uuid = player_info['get_team']
             team = TeamModelRepository.get_team_by_uuid(
                 self,
                 team_uuid=team_uuid,
             )
+            if not team:
+                raise EntityNotFound(error_code='team_not_found')
             banker = False
 
         player = Player(
             uuid=player_uuid,
-            first_name=player_info['first_name'],
-            last_name=player_info['last_name'],
-            email=player_info['email'],
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
             password=Passwords.hash_password(password),
             banker=banker,
             team_uuid=team_uuid,
@@ -96,6 +117,33 @@ class PlayerModelRepository(object):
             "player_uuid": player_uuid,
             "team_uuid": team_uuid
         }
+
+    def signin_player(
+        self,
+        player_info,
+    ):
+        password = player_info.get('password', None)
+        email = player_info.get('email', None)
+
+        if (
+            (password is None or not password) or
+            (email is None or not email)
+        ):
+            raise ModelCreationError(error_code='missing_parameter')
+
+        player = self.get_player_by_email(player_email=email)
+
+        if not player:
+            raise EntityNotFound(error_code='player_not_found')
+
+        token = Passwords.generate_token(player, password)
+
+        return jsonify(
+            {
+                'token': token.decode('UTF-8'),
+                'banker': player.banker,
+            }
+        )
 
     def delete_player(
         self,
@@ -110,7 +158,8 @@ class PlayerModelRepository(object):
         additional_filters,
     ):
         total_rows = db.session.query(Player).filter_by(
-            team_uuid=team_uuid).count()
+            team_uuid=team_uuid
+        ).count()
         players = db.session.query(Player).filter(
             Player.team_uuid == team_uuid
         )
@@ -166,8 +215,10 @@ class PlayerModelRepository(object):
                 player.first_name,
                 player.last_name
                     FROM player
-                    LEFT OUTER JOIN "PlayerFines" ON player.uuid = "PlayerFines".player_uuid
-                    LEFT OUTER JOIN fine ON "PlayerFines".fine_uuid = fine.uuid
+                    LEFT OUTER JOIN "PlayerFines" ON
+                        player.uuid = "PlayerFines".player_uuid
+                    LEFT OUTER JOIN fine ON
+                        "PlayerFines".fine_uuid = fine.uuid
                     JOIN team ON player.team_uuid = team.uuid
                     WHERE team.uuid = :team_uuid
         """
@@ -300,7 +351,9 @@ class PlayerModelRepository(object):
             PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
         ).join(
             Player, (Player.uuid == PlayerFines.player_uuid)
-        ).filter(PlayerFines.player_uuid == player_uuid).order_by(func.sum(Fine.cost)).limit(1).scalar()
+        ).filter(
+            PlayerFines.player_uuid == player_uuid
+        ).order_by(func.sum(Fine.cost)).limit(1).scalar()
 
     def delete_players_fines(
         self,

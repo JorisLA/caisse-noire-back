@@ -1,20 +1,13 @@
-import uuid
-import jwt
-import datetime
-
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 from flask.views import MethodView, View
-from flask_cors import CORS, cross_origin
-from sqlalchemy import exc
+from flask_cors import cross_origin
 
-from caisse_noire.common.decorators.identification_authorizer import token_required
-from caisse_noire.models.repository.player_repository import PlayerModelRepository
-from caisse_noire.models.repository.team_repository import TeamModelRepository
-from app import bcrypt
+from caisse_noire.models.repository.player_repository import (
+    PlayerModelRepository
+)
 from caisse_noire.common.exceptions.database_exceptions import (
-    DatabaseError,
     ModelCreationError,
-    ModelUpdateError,
+    EntityNotFound,
 )
 
 
@@ -22,7 +15,6 @@ class SignupHandler(
     MethodView,
     View,
     PlayerModelRepository,
-    TeamModelRepository,
 ):
 
     def __init__(
@@ -37,12 +29,18 @@ class SignupHandler(
         **kwargs
     ):
         try:
-            player_uuid = self.create_player(request.get_json())
+            player_uuid = self.signup_player(request.get_json())
         except ModelCreationError as e:
             return jsonify(
                 {
-                    'message': 'cant_create_object{}'.format(e.error_code)
+                    'message': f'{e.error_code}',
                 }
-            ), 400
+            ), 422
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
 
         return '', 204

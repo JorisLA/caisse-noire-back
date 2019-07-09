@@ -5,6 +5,9 @@ This is an utility class (not supposed to have instances)
 
 import re
 import unicodedata
+import datetime
+import jwt
+from flask import current_app
 from collections import Counter
 from typing import Optional
 
@@ -18,7 +21,9 @@ class Passwords(object):
     BC_PATTERN = re.compile(r'^\$2a\$\d\d\$[./a-zA-Z0-9]{53}$')
 
     @staticmethod
-    def hash_password(password: str, current_hash: Optional[str] = None) -> str:
+    def hash_password(
+        password: str, current_hash: Optional[str] = None
+    ) -> str:
         """
         Create a hash of a password using bcrypt.
 
@@ -77,7 +82,9 @@ class Passwords(object):
         return all(rule(hashed_pass) for rule in rules)
 
     @staticmethod
-    def is_password_valid(password: str, password_hash: Optional[str] = None) -> bool:
+    def is_password_valid(
+        password: str, password_hash: Optional[str] = None
+    ) -> bool:
         """
         Check an eventually hashed password validity
 
@@ -96,3 +103,36 @@ class Passwords(object):
             return Passwords._is_bcrypt_hash_valid(password)
 
         return False
+
+    @staticmethod
+    def generate_token(
+        player: object, post_password: str
+    ) -> str:
+        """
+        Generate a token.
+
+        Args:
+            player (object): Player object
+            post_password (str): Password from body parameter
+
+        Returns:
+            str: Generated token
+        """
+        if bcrypt.check_password_hash(
+            player.password, post_password
+        ):
+            token = jwt.encode(
+                {
+                    'public_id': player.uuid,
+                    'team_uuid': player.team_uuid,
+                    'exp': (
+                        datetime.datetime.utcnow() +
+                        datetime.timedelta(minutes=30)
+                    )
+                },
+                current_app.config['SECRET_KEY']
+            )
+
+            return token
+        else:
+            return False

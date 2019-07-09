@@ -75,3 +75,11 @@ class Player(db.Model):
         """
         """
         return sum([fine.fine.cost for fine in self.fines])
+
+    @staticmethod
+    def get_total_players_by_team(self):
+        """
+        """
+        total_rows = db.session.query(Player).filter_by(
+            team_uuid=team_uuid
+        ).count()
