@@ -6,6 +6,7 @@ from flask import request, jsonify, current_app
 from caisse_noire.models.player import Player
 from app import db
 
+
 def token_required(f):
     """
     Check identification through a token authorizer
@@ -24,14 +25,18 @@ def token_required(f):
             token = request.headers['x-access-token']
 
         if not token:
-            return jsonify({'message' : 'Token is missing!'}), 401
+            return jsonify({'message': 'token_missing'}), 401
 
         try:
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-            current_user = db.session.query(Player).filter_by(uuid=data['public_id']).first()
+            data = jwt.decode(
+                token, current_app.config['SECRET_KEY'], algorithms=['HS256']
+            )
+            current_user = db.session.query(Player).filter_by(
+                uuid=data['public_id']
+            ).first()
             kwargs['current_user'] = current_user
         except:
-            return jsonify({'message' : 'Token is invalid!'}), 401
+            return jsonify({'message': 'token_invalid'}), 401
 
         return f(*args, **kwargs)
 

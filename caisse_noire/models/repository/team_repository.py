@@ -12,12 +12,6 @@ class TeamModelRepository(object):
     """
     """
 
-    def get_team_by_uuid(
-        self,
-        team_uuid,
-    ):
-        return db.session.query(Team).filter_by(uuid=team_uuid).first()
-
     def get_teams(
         self,
     ):

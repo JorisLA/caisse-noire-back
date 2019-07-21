@@ -7,6 +7,8 @@ from caisse_noire.models.team import Team
 from caisse_noire.models.fine import Fine
 from caisse_noire.common.password import Passwords
 from tests.data.conf import TEST_PASSWORD
+from tests.data.fines import test_fine
+from tests.data.teams import test_team
 
 
 def test_admin():
@@ -41,23 +43,17 @@ def test_player():
     return player
 
 
-def test_players_from_single_team(n=2):
+def test_players_from_single_team(n=10):
     fake = Faker(locale="fr_FR")
     fake.seed(42)
 
-    team_uuid = str(uuid.uuid4())
-    team = Team(uuid=team_uuid, label='sdv')
+    team = test_team()
     database.db.session.add(team)
     database.db.session.commit()
 
-    fine_uuid = str(uuid.uuid4())
-    fine = Fine(
-        uuid=fine_uuid,
-        cost=2,
-        label='oubli',
-        team_uuid=team_uuid
-    )
+    fine = test_fine(team_uuid=team.uuid)
     database.db.session.add(fine)
+    database.db.session.commit()
 
     association = PlayerFines(player_fines_id=str(uuid.uuid4()))
     association.fine = fine
@@ -71,7 +67,7 @@ def test_players_from_single_team(n=2):
             email=fake.email(),
             password=Passwords.hash_password(fake.password()),
             banker=False,
-            team_uuid=team_uuid,
+            team_uuid=team.uuid,
         )
         player.fines.append(association)
         players.append(player)

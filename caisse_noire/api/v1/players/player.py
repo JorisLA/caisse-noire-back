@@ -14,6 +14,13 @@ from caisse_noire.models.repository.player_repository import (
 from caisse_noire.models.repository.fine_repository import (
     FineModelRepository
 )
+from caisse_noire.common.exceptions.database_exceptions import (
+    ModelCreationError,
+    EntityNotFound,
+)
+from caisse_noire.common.exceptions.authorization_exceptions import (
+    AuthorizationError,
+)
 from caisse_noire.common.settings import MAX_PER_PAGE
 
 
@@ -37,65 +44,46 @@ class PlayerHandler(
         *args,
         **kwargs
     ):
-        post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
+        payload = {
+            'banker': kwargs['current_user'].banker,
+            'player_uuid': player_uuid,
+            'fine_uuid': (
+                request.get_json()['fine_uuid']
+                if request.get_json()
+                else None
+            ),
+        }
+        try:
+            self.response_object['player'] = self.update_player_fine(payload)
+            self.response_object['message'] = 'Player updated!'
+        except AuthorizationError as e:
             self.response_object['status'] = 'failure'
             return jsonify(
-                {'message': 'The current user is not authorized'}
+                {
+                    'message': f'{e.error_code}',
+                }
             ), 403
-
-        player = self.get_player_by_uuid(player_uuid=player_uuid)
-        if not player:
+        except EntityNotFound as e:
             self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Player not found'}), 404
-
-        try:
-            if 'fine_uuid' in post_data:
-                fine = self.get_fine_by_uuid(fine_uuid=post_data['fine_uuid'])
-                if not fine:
-                    self.response_object['status'] = 'failure'
-                    return jsonify({'message': 'Fine not found'}), 404
-                self.response_object['player'] = self.update_player_fine(
-                    player, fine)
-            self.response_object['message'] = 'Player updated!'
-        except exc.SQLAlchemyError as error:
-            print(error)
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+        except ModelCreationError as e:
             self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 422
+        except exc.SQLAlchemyError as e:
+            self.response_object['status'] = 'failure'
+            return jsonify(
+                {
+                    'message': f'{e.error_code}'
+                }
+            ), 500
 
         self.response_object['status'] = 'success'
         return jsonify({'total': self.response_object['player']['total']}), 200
-
-    @cross_origin()
-    @token_required
-    def delete(
-        self,
-        player_uuid,
-        *args,
-        **kwargs
-    ):
-        post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
-            self.response_object['status'] = 'failure'
-            return jsonify(
-                {'message': 'The current user is not authorized'}
-            ), 403
-
-        player = self.get_player_by_uuid(player_uuid=player_uuid)
-        if not player:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Player not found'}), 404
-
-        try:
-            self.delete_fine(
-                player=player,
-            )
-        except exc.SQLAlchemyError as error:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
-
-        self.response_object['message'] = 'Player removed!'
-        self.response_object['status'] = 'success'
-        return jsonify(self.response_object), 204

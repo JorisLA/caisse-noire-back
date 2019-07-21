@@ -9,7 +9,6 @@ from flask import Flask
 from database import db
 from caisse_noire.common.json_encoder import JSONSerializer
 
-# db = SQLAlchemy()
 bcrypt = Bcrypt()
 cors = CORS()
 mail = SendGrid()

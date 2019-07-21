@@ -1,11 +1,19 @@
 from flask.views import MethodView, View
-from flask import request, jsonify
-from flask_cors import CORS, cross_origin
-from sqlalchemy import exc
+from flask import jsonify
+from flask_cors import cross_origin
 
-from caisse_noire.common.decorators.identification_authorizer import token_required
-from caisse_noire.models.repository.player_repository import PlayerModelRepository
-from app import mail
+from caisse_noire.common.decorators.identification_authorizer import (
+    token_required,
+)
+from caisse_noire.models.repository.player_repository import (
+    PlayerModelRepository,
+)
+from caisse_noire.common.exceptions.database_exceptions import (
+    EntityNotFound,
+)
+from caisse_noire.common.exceptions.authorization_exceptions import (
+    AuthorizationError,
+)
 
 
 class PlayerFineHandler(
@@ -27,9 +35,16 @@ class PlayerFineHandler(
         *args,
         **kwargs
     ):
-        self.response_object['fines'] = self.get_player_fines(
-            player_uuid=player_uuid
-        )
+        try:
+            self.response_object['fines'] = self.get_player_fines(
+                player_uuid=player_uuid
+            )
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
         return jsonify(self.response_object), 200
 
     @cross_origin()
@@ -40,7 +55,22 @@ class PlayerFineHandler(
         *args,
         **kwargs
     ):
-        if kwargs['current_user'].banker == 1:
-            player = self.get_player_by_uuid(player_uuid=player_uuid)
-            self.delete_player_fines(player=player)
-            return '', 204
+        try:
+            self.delete_player_fines(
+                banker=kwargs['current_user'].banker,
+                player_uuid=player_uuid,
+            )
+        except AuthorizationError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 403
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+
+        return '', 204

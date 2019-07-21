@@ -3,9 +3,14 @@ from flask import request, jsonify
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from caisse_noire.common.decorators.identification_authorizer import token_required
-from caisse_noire.models.repository.player_repository import PlayerModelRepository
+from caisse_noire.common.decorators.identification_authorizer import (
+    token_required
+)
+from caisse_noire.models.repository.player_repository import (
+    PlayerModelRepository
+)
 from app import mail
+
 
 class PlayersFinesHandler(
     MethodView,
@@ -26,15 +31,22 @@ class PlayersFinesHandler(
         **kwargs
     ):
         player_email = []
-        if kwargs['current_user'].banker == 1:
-            players = self.get_players_by_team(team_uuid=kwargs['current_user'].team_uuid)
-            for player in players:
-                fine_cost = self.get_player_fine_cost(player_uuid=player.uuid)
-                mail.send_email(
-                    from_email='admin@caissenoire.com',
-                    to_email=player.email,
-                    subject='Caisse noire payment',
-                    text='You have to pay {} € this month'.format(fine_cost),
-                )
-        return '', 204
+        try:
+            self.send_fines_to_players_email(
+                banker=kwargs['current_user'].banker,
+                team_uuid=team_uuid,
+            )
+        except AuthorizationError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 403
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
 
+        return '', 204

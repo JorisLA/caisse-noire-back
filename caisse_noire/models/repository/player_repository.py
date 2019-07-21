@@ -2,11 +2,12 @@ import uuid
 import collections
 
 from flask import jsonify
-from sqlalchemy import or_, func
+from sqlalchemy import func
 from sqlalchemy.sql import select, text
 
 from caisse_noire.models.player import Player, PlayerFines
 from caisse_noire.models.fine import Fine
+from caisse_noire.models.team import Team
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from app import db
 from caisse_noire.common.password import Passwords
@@ -15,6 +16,9 @@ from caisse_noire.common.exceptions.database_exceptions import (
     ModelCreationError,
     ModelUpdateError,
     EntityNotFound,
+)
+from caisse_noire.common.exceptions.authorization_exceptions import (
+    AuthorizationError,
 )
 from caisse_noire.common.uuid_checker import is_uuid
 
@@ -25,20 +29,30 @@ class PlayerModelRepository(object):
 
     def update_player_fine(
         self,
-        player,
-        fine,
-    ):
-        association = PlayerFines(player_fines_id=str(uuid.uuid4()))
-        association.fine = fine
-        player.fines.append(association)
-        db.session.commit()
-        return player.to_dict()
+        payload: dict,
+    ) -> dict:
+        if not payload['banker']:
+            raise AuthorizationError(error_code='player_unauthorized')
 
-    def get_players_by_team(
-        self,
-        team_uuid,
-    ):
-        return db.session.query(Player).filter_by(team_uuid=team_uuid).all()
+        player = self.get_player_by_uuid(player_uuid=payload['player_uuid'])
+
+        if not player:
+            raise EntityNotFound(error_code='player_not_found')
+
+        if not payload['fine_uuid']:
+            raise ModelCreationError(error_code='missing_parameter')
+
+        fine = self.get_fine_by_uuid(fine_uuid=payload['fine_uuid'])
+
+        if not fine:
+            raise EntityNotFound(error_code='fine_not_found')
+
+        player_fine = PlayerFines(player_fines_id=str(uuid.uuid4()))
+        player_fine.fine = fine
+        player.fines.append(player_fine)
+        db.session.commit()
+
+        return player.to_dict()
 
     def get_player_by_uuid(
         self,
@@ -92,7 +106,7 @@ class PlayerModelRepository(object):
                 team_name=add_team,
             )
         else:
-            team = TeamModelRepository.get_team_by_uuid(
+            team = Team.get_team_by_uuid(
                 self,
                 team_uuid=team_uuid,
             )
@@ -157,45 +171,50 @@ class PlayerModelRepository(object):
         team_uuid,
         additional_filters,
     ):
-        total_rows = db.session.query(Player).filter_by(
-            team_uuid=team_uuid
-        ).count()
-        players = db.session.query(Player).filter(
-            Player.team_uuid == team_uuid
-        )
-        if additional_filters.get('lastUuid') != '':
-            from_object = db.session.query(Player).filter_by(
-                uuid=additional_filters.get('lastUuid')).first()
+        total_players = Player.get_total_players_by_team(team_uuid)
+        if not total_players:
+            raise EntityNotFound(error_code='team_not_found')
+        players = Player.get_all_players_by_team(team_uuid)
+
+        if (
+            additional_filters.get('lastUuid') and
+            additional_filters.get('lastUuid') != ''
+        ):
+            from_last_uuid = Player.get_player_by_uuid(
+                player_uuid=additional_filters.get('lastUuid')
+            )
+            if not from_last_uuid:
+                raise EntityNotFound(error_code='player_not_found')
+
         # FILTER BY FIRST NAME OR LAST NAME
-        if additional_filters.get('filter') is not None:
-            players = players.filter(
-                or_(
-                    Player.first_name.ilike('%%%s%%' %
-                                            additional_filters.get('filter')),
-                    Player.last_name.ilike('%%%s%%' %
-                                           additional_filters.get('filter')),
-                )
+        if (
+            additional_filters.get('filter') and
+            additional_filters.get('filter') != ''
+        ):
+            players = Player.get_player_by_name(
+                players=players,
+                filter=additional_filters.get('filter')
             )
             return {
                 'players': players,
-                'total_rows': total_rows,
+                'total_rows': total_players,
             }
 
         # FIRST PAGE
         if int(additional_filters.get('currentPage')) == 1:
-            players = players.order_by(Player.created_date.asc()).limit(
-                int(additional_filters.get('perPage')))
+            players = Player.get_players_by_limit_per_page(
+                players=players,
+                limit=int(additional_filters.get('perPage'))
+            )
         else:
-            players = players.filter(
-                Player.created_date > from_object.created_date
-            ).order_by(
-                Player.first_name.asc()
-            ).limit(
-                int(additional_filters.get('perPage'))
+            players = Player.get_players_by_lastuuid(
+                players=players,
+                from_last_uuid=from_last_uuid,
+                limit=int(additional_filters.get('perPage'))
             )
         return {
             'players': players,
-            'total_rows': total_rows,
+            'total_rows': total_players,
         }
 
     def get_players(
@@ -328,45 +347,67 @@ class PlayerModelRepository(object):
 
     def get_player_fines(
         self,
-        player_uuid,
-    ):
+        player_uuid: uuid,
+    ) -> collections:
         result = []
-        fines = db.session.query(
-            PlayerFines
-        ).filter(PlayerFines.player_uuid == player_uuid)
-        for fine in fines:
+
+        player = self.get_player_by_uuid(player_uuid=player_uuid)
+
+        if not player:
+            raise EntityNotFound(error_code='player_not_found')
+
+        player_fines = Player.get_player_fines_by_uuid(
+            player_uuid=player_uuid
+        )
+
+        for player_fine in player_fines:
             result.append(
-                fine.fine.label,
+                player_fine.fine.label,
             )
+        # return the count of each fines a player has
+        # ex: {'toto':2, 'titi':1}
         final_result = collections.Counter(result)
         return final_result
 
-    def get_player_fine_cost(
-        self,
-        player_uuid,
-    ):
-        return db.session.query(
-            func.sum(Fine.cost)
-        ).join(
-            PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
-        ).join(
-            Player, (Player.uuid == PlayerFines.player_uuid)
-        ).filter(
-            PlayerFines.player_uuid == player_uuid
-        ).order_by(func.sum(Fine.cost)).limit(1).scalar()
-
-    def delete_players_fines(
-        self,
-        players,
-    ):
-        for player in players:
-            player.fines = []
-        db.session.commit()
-
     def delete_player_fines(
         self,
-        player,
-    ):
-        db.session.query(PlayerFines).filter_by(
-            player_uuid=player.uuid).delete()
-        db.session.commit()
+        banker: bool,
+        player_uuid: uuid,
+    ) -> bool:
+        if not banker:
+            raise AuthorizationError(error_code='player_unauthorized')
+
+        player = self.get_player_by_uuid(player_uuid=player_uuid)
+
+        if not player:
+            raise EntityNotFound(error_code='player_not_found')
+
+        Player.delete_player_fines(player_uuid)
+
+        return True
+
+    def send_fines_to_players_email(
+        self,
+        banker: bool,
+        team_uuid: uuid,
+    ) -> None:
+        if not banker:
+            raise AuthorizationError(error_code='player_unauthorized')
+
+        team = Team.get_team_by_uuid(team_uuid=team_uuid)
+
+        if not team:
+            raise EntityNotFound(error_code='team_not_found')
+
+        players = Player.get_players_by_team(
+            team_uuid=team_uuid
+        )
+
+        for player in players:
+            fine_cost = Player.get_player_fine_cost(player_uuid=player.uuid)
+            mail.send_email(
+                from_email='admin@caissenoire.com',
+                to_email=player.email,
+                subject='Caisse noire payment',
+                text='You have to pay {} € this month'.format(fine_cost),
+            )

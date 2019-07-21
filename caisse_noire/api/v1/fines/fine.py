@@ -4,7 +4,9 @@ from flask import request, jsonify
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.common.decorators.identification_authorizer import (
+    token_required
+)
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from caisse_noire.models.repository.fine_repository import FineModelRepository
 from caisse_noire.common.settings import MAX_PER_PAGE

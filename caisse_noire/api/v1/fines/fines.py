@@ -4,7 +4,10 @@ from flask import request, jsonify
 from flask_cors import CORS, cross_origin
 from sqlalchemy import exc
 
-from caisse_noire.common.decorators.identification_authorizer import token_required
+from caisse_noire.common.decorators.identification_authorizer import(
+    token_required
+)
+from caisse_noire.models.team import Team
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from caisse_noire.models.repository.fine_repository import FineModelRepository
 from caisse_noire.common.settings import MAX_PER_PAGE
@@ -29,29 +32,40 @@ class FinesHandler(
         *args,
         **kwargs
     ):
-        post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'The current user is not authorized'}), 403
-
-        if not post_data:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Empty data sent in the request'}), 400
-
-        team = self.get_team_by_uuid(
-            team_uuid=kwargs['current_user'].team_uuid)
-        if not team:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Team not found'}), 404
         try:
             self.create_fine(
-                post_data=post_data,
-                team=team,
+                banker=kwargs['current_user'].banker,
+                post_data=request.get_json(),
+                team_uuid=kwargs['current_user'].team_uuid,
             )
-        except exc.SQLAlchemyError as error:
+        except AuthorizationError as e:
             self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 403
+        except EntityNotFound as e:
+            self.response_object['status'] = 'failure'
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+        except ModelCreationError as e:
+            self.response_object['status'] = 'failure'
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 422
+        except exc.SQLAlchemyError as e:
+            self.response_object['status'] = 'failure'
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 500
 
         self.response_object['message'] = 'Fine added!'
         self.response_object['status'] = 'success'
@@ -91,4 +105,3 @@ class FinesHandler(
 
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 200
-

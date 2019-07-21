@@ -27,3 +27,9 @@ class Team(db.Model):
 
     def __repr__(self):
         return '<uuid {}>'.format(self.uuid)
+
+    @staticmethod
+    def get_team_by_uuid(
+        team_uuid,
+    ):
+        return db.session.query(Team).filter_by(uuid=team_uuid).first()
