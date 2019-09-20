@@ -155,6 +155,15 @@ class Player(db.Model):
         db.session.commit()
 
     @staticmethod
+    def delete_player_fines_by_uuid(
+        fine_uuid: uuid,
+    ):
+        db.session.query(PlayerFines).filter(
+            PlayerFines.fine_uuid == fine_uuid
+        ).delete()
+        db.session.commit()
+
+    @staticmethod
     def get_players_by_team(
         team_uuid,
     ):
@@ -165,11 +174,17 @@ class Player(db.Model):
         player_uuid,
     ):
         return db.session.query(
-                func.sum(Fine.cost)
-            ).join(
-                PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
-            ).join(
-                Player, (Player.uuid == PlayerFines.player_uuid)
-            ).filter(
-                PlayerFines.player_uuid == player_uuid
-            ).order_by(func.sum(Fine.cost)).limit(1).scalar()
+            func.sum(Fine.cost)
+        ).join(
+            PlayerFines, (Fine.uuid == PlayerFines.fine_uuid)
+        ).join(
+            Player, (Player.uuid == PlayerFines.player_uuid)
+        ).filter(
+            PlayerFines.player_uuid == player_uuid
+        ).order_by(func.sum(Fine.cost)).limit(1).scalar()
+
+    @staticmethod
+    def get_player_by_email(
+        player_email,
+    ):
+        return db.session.query(Player).filter_by(email=player_email).first()

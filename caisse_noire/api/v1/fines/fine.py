@@ -9,6 +9,13 @@ from caisse_noire.common.decorators.identification_authorizer import (
 )
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from caisse_noire.models.repository.fine_repository import FineModelRepository
+from caisse_noire.common.exceptions.database_exceptions import (
+    ModelCreationError,
+    EntityNotFound,
+)
+from caisse_noire.common.exceptions.authorization_exceptions import (
+    AuthorizationError,
+)
 from caisse_noire.common.settings import MAX_PER_PAGE
 
 
@@ -32,28 +39,41 @@ class FineHandler(
         *args,
         **kwargs
     ):
-        post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'The current user is not authorized'}), 403
-
-        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
-        if not fine:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Fine not found'}), 404
+        payload = {
+            'banker': kwargs['current_user'].banker,
+            'label': request.get_json().get('label'),
+            'cost': request.get_json().get('cost'),
+            'fine_uuid': fine_uuid,
+        }
 
         try:
-            self.update_fine(
-                post_data=post_data,
-                fine=fine,
-            )
-        except exc.SQLAlchemyError as error:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
+            self.update_fine(payload=payload)
+        except AuthorizationError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 403
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+        except ModelCreationError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 422
+        except exc.SQLAlchemyError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}'
+                }
+            ), 500
 
         self.response_object['message'] = 'Fine updated!'
-        self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204
 
     @cross_origin()
@@ -64,25 +84,33 @@ class FineHandler(
         *args,
         **kwargs
     ):
-        post_data = request.get_json()
-
-        if not kwargs['current_user'].banker:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'The current user is not authorized'}), 403
-
-        fine = self.get_fine_by_uuid(fine_uuid=fine_uuid)
-        if not fine:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Fine not found'}), 404
+        payload = {
+            'banker': kwargs['current_user'].banker,
+            'fine_uuid': fine_uuid,
+        }
 
         try:
             self.delete_fine(
-                fine=fine,
+                payload=payload,
             )
-        except exc.SQLAlchemyError as error:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
+        except AuthorizationError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 403
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+        except exc.SQLAlchemyError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}'
+                }
+            ), 500
 
         self.response_object['message'] = 'Fine removed!'
-        self.response_object['status'] = 'success'
         return jsonify(self.response_object), 204

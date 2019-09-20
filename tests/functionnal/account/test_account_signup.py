@@ -74,7 +74,7 @@ def test_account_signup_banker_invalid_parameter_team(
     assert response.get_json()['message'] == 'invalid_parameter'
 
 
-def test_account_signup_banker_iteam_not_found(
+def test_account_signup_banker_team_not_found(
     client,
     account_signup_player_team_not_found
 ):

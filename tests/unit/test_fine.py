@@ -1,6 +1,8 @@
 """
 Unit test for fine model
 """
+
+
 def test_new_fine(new_fine):
     """
     GIVEN a Fine model

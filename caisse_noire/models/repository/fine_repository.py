@@ -4,7 +4,7 @@ from flask import current_app
 
 from caisse_noire.models.fine import Fine
 from caisse_noire.models.team import Team
-from caisse_noire.models.player import PlayerFines
+from caisse_noire.models.player import Player, PlayerFines
 from caisse_noire.common.exceptions.database_exceptions import (
     DatabaseError,
     ModelCreationError,
@@ -21,73 +21,45 @@ class FineModelRepository(object):
     """
     """
 
-    def get_fine_by_uuid(
-        self,
-        fine_uuid,
-    ):
-        return db.session.query(Fine).filter_by(uuid=fine_uuid).first()
-
     def get_all_fines_by_team(
         self,
         team_uuid,
-        additional_filters,
-        for_player_view=False,
+        filters,
     ):
-        fines = db.session.query(
-            Fine
-        ).filter(
-            Fine.team_uuid == team_uuid
-        )
-        if for_player_view:
-            return {
-                'fines': fines,
-            }
-        else:
-            total_rows = db.session.query(Fine).filter_by(
-                team_uuid=team_uuid).count()
-            fines = db.session.query(Fine
-                                     ).filter(
-                Fine.team_uuid == team_uuid
-            )
-            if additional_filters.get('lastUuid') != '':
-                from_object = db.session.query(Fine).filter_by(
-                    uuid=additional_filters.get('lastUuid')).first()
-            # FILTER BY LABEL
-            if additional_filters.get('filter'):
-                fines = fines.filter(
-                    Fine.label.like('%'+additional_filters.get('filter')+'%')
-                )
-                return {
-                    'fines': fines,
-                    'total_rows': total_rows,
-                }
+        fines = Fine.get_all_fines_by_team(team_uuid)
 
-            if int(additional_filters.get('currentPage')) == 1:
-                fines = fines.order_by(Fine.created_date.asc()).limit(
-                    int(additional_filters.get('perPage')))
-            else:
-                fines = fines.filter(
-                    Fine.created_date > from_object.created_date
-                ).order_by(
-                    Fine.label.asc()
-                ).limit(
-                    int(additional_filters.get('perPage'))
-                )
+        total_rows = Fine.get_all_fines_by_team(team_uuid)
+
+        # FILTER BY LABEL
+        if filters.get('filter'):
             return {
-                'fines': fines,
+                'fines': Fine.get_fine_by_label_from_list(
+                    fines,
+                    filters.get('filter'),
+                ),
                 'total_rows': total_rows,
             }
 
-    def getOrder(
-        self,
-        order,
-    ):
+        if int(filters.get('currentPage')) == 1:
+            fines = Fine.get_fines_limit_from_list(
+                fines,
+                int(filters.get('perPage')),
+            )
+        else:
+            from_last_fine = Fine.get_fine_by_uuid(
+                uuid=filters.get('lastUuid'),
+            )
+            if not from_last_fine:
+                raise EntityNotFound(error_code='last_fine_not_found')
+            fines = Fine.get_fines_other_page_from_list(
+                fines,
+                from_last_fine,
+                int(filters.get('perPage')),
+            )
         return {
-            'labelasc': Fine.label.asc(),
-            'labeldesc': Fine.label.desc(),
-            'costasc': Fine.cost.asc(),
-            'costdesc': Fine.cost.desc(),
-        }.get(order)
+            'fines': fines,
+            'total_rows': total_rows,
+        }
 
     def create_fine(
         self,
@@ -108,6 +80,7 @@ class FineModelRepository(object):
             raise ModelCreationError(error_code='missing_parameter')
 
         team = Team.get_team_by_uuid(
+            self,
             team_uuid=team_uuid
         )
 
@@ -125,20 +98,34 @@ class FineModelRepository(object):
 
     def update_fine(
         self,
-        post_data,
-        fine,
-    ):
-        fine.label = post_data['label']
-        fine.cost = post_data['cost']
+        payload: dict,
+    ) -> None:
+        if not payload['banker']:
+            raise AuthorizationError(error_code='player_unauthorized')
+
+        fine = Fine.get_fine_by_uuid(uuid=payload['fine_uuid'])
+
+        if not fine:
+            raise EntityNotFound(error_code='fine_not_found')
+
+        if not payload['cost'] or not payload['label']:
+            raise ModelCreationError(error_code='missing_parameter')
+
+        fine.label = payload['label']
+        fine.cost = payload['cost']
         db.session.commit()
 
     def delete_fine(
         self,
-        fine,
-    ):
-        db.session.query(PlayerFines).filter(
-            PlayerFines.fine_uuid == fine.uuid
-        ).delete()
-        db.session.commit()
-        db.session.delete(fine)
-        db.session.commit()
+        payload: dict,
+    ) -> None:
+        if not payload['banker']:
+            raise AuthorizationError(error_code='player_unauthorized')
+
+        fine = Fine.get_fine_by_uuid(uuid=payload['fine_uuid'])
+
+        if not fine:
+            raise EntityNotFound(error_code='fine_not_found')
+
+        Player.delete_player_fines_by_uuid(fine_uuid=fine.uuid)
+        Fine.delete_fine(fine=fine)

@@ -1,5 +1,9 @@
 import pytest
+
 from app import create_app, os
+from tests.data import users
+from tests.data import fines
+from tests.data import teams
 from caisse_noire.api.v1.players.players import PlayersHandler
 from caisse_noire.api.v1.players.player import PlayerHandler
 from caisse_noire.api.v1.players.fines import PlayersFinesHandler
@@ -30,3 +34,37 @@ def app():
 def client(app):
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture(scope="function")
+def test_list_players(db_session: object) -> dict:
+    """
+    Creates 10 test users
+    """
+    _users = users.test_players_from_single_team()
+    for player in _users:
+        db_session.add(player)
+    db_session.commit()
+    return _users
+
+
+@pytest.fixture(scope="function")
+def player(db_session: object) -> dict:
+    user = users.test_player()
+    db_session.add(user)
+    db_session.commit()
+    fine = fines.test_fine(user.team_uuid)
+    db_session.add(fine)
+    db_session.commit()
+    return {
+        'user': user,
+        'fine': fine,
+    }
+
+
+@pytest.fixture(scope="function")
+def banker(db_session):
+    user = users.test_admin()
+    db_session.add(user)
+    db_session.commit()
+    return user

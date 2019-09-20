@@ -7,14 +7,15 @@ from caisse_noire.models.team import Team
 from caisse_noire.models.fine import Fine
 from caisse_noire.common.password import Passwords
 from tests.data.conf import TEST_PASSWORD
-from tests.data.fines import test_fine
+from tests.data.fines import test_fine, test_fines
 from tests.data.teams import test_team
 
 
-def test_admin():
-    team_uuid = str(uuid.uuid4())
-    team = Team(uuid=team_uuid, label='sdv')
-    database.db.session.add(team)
+def test_admin(team_uuid=None):
+    if not team_uuid:
+        team_uuid = str(uuid.uuid4())
+        team = Team(uuid=team_uuid, label='sdv')
+        database.db.session.add(team)
     player = Player(
         uuid=str(uuid.uuid4()),
         first_name='Example',
@@ -31,6 +32,19 @@ def test_player():
     team_uuid = str(uuid.uuid4())
     team = Team(uuid=team_uuid, label='sdv')
     database.db.session.add(team)
+    player = Player(
+        uuid=str(uuid.uuid4()),
+        first_name='Example',
+        last_name='Player',
+        email='Player@somedomain.com',
+        password=Passwords.hash_password(TEST_PASSWORD),
+        banker=False,
+        team_uuid=team_uuid,
+    )
+    return player
+
+
+def data_player(team_uuid: uuid) -> Player:
     player = Player(
         uuid=str(uuid.uuid4()),
         first_name='Example',

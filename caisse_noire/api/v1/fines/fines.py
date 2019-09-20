@@ -7,6 +7,13 @@ from sqlalchemy import exc
 from caisse_noire.common.decorators.identification_authorizer import(
     token_required
 )
+from caisse_noire.common.exceptions.authorization_exceptions import (
+    AuthorizationError,
+)
+from caisse_noire.common.exceptions.database_exceptions import (
+    ModelCreationError,
+    EntityNotFound,
+)
 from caisse_noire.models.team import Team
 from caisse_noire.models.repository.team_repository import TeamModelRepository
 from caisse_noire.models.repository.fine_repository import FineModelRepository
@@ -39,21 +46,18 @@ class FinesHandler(
                 team_uuid=kwargs['current_user'].team_uuid,
             )
         except AuthorizationError as e:
-            self.response_object['status'] = 'failure'
             return jsonify(
                 {
                     'message': f'{e.error_code}',
                 }
             ), 403
         except EntityNotFound as e:
-            self.response_object['status'] = 'failure'
             return jsonify(
                 {
                     'message': f'{e.error_code}',
                 }
             ), 404
         except ModelCreationError as e:
-            self.response_object['status'] = 'failure'
             return jsonify(
                 {
                     'message': f'{e.error_code}',
@@ -78,7 +82,7 @@ class FinesHandler(
         *args,
         **kwargs
     ):
-        additional_filters = {
+        filters = {
             'sort': request.args.get('_sort', None),
             'order': request.args.get('_order', None),
             'filter': request.args.get('_filter', None),
@@ -89,19 +93,24 @@ class FinesHandler(
         try:
             results = self.get_all_fines_by_team(
                 team_uuid=kwargs['current_user'].team_uuid,
-                additional_filters=additional_filters,
+                filters=filters,
             )
             self.response_object['fines'] = [
                 fine.to_dict()
                 for fine in results['fines']
             ]
-        except exc.SQLAlchemyError as error:
-            self.response_object['status'] = 'failure'
-            return jsonify({'message': 'Internal server error'}), 500
-
-        # if not self.response_object['fines']:
-        #     self.response_object['status'] = 'failure'
-        #     return jsonify({'message' : 'No fines or wrong team uuid'}), 404
+        except EntityNotFound as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 404
+        except exc.SQLAlchemyError as e:
+            return jsonify(
+                {
+                    'message': f'{e.error_code}',
+                }
+            ), 500
 
         self.response_object['status'] = 'success'
         return jsonify(self.response_object), 200

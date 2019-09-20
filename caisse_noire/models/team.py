@@ -30,6 +30,7 @@ class Team(db.Model):
 
     @staticmethod
     def get_team_by_uuid(
+        self,
         team_uuid,
     ):
         return db.session.query(Team).filter_by(uuid=team_uuid).first()

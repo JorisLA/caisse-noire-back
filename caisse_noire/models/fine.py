@@ -36,8 +36,6 @@ class Fine(db.Model):
         self.team_uuid = team_uuid
 
     def to_dict(self, for_player_view=False):
-        """
-        """
         if for_player_view:
             info = {
                 'value': self.uuid,
@@ -54,3 +52,56 @@ class Fine(db.Model):
         }
 
         return info
+
+    @staticmethod
+    def get_fines_other_page_from_list(
+        fines: list,
+        from_last_fine: object,
+        page: int
+    ) -> object:
+        return fines.filter(
+            Fine.created_date > from_last_fine.created_date
+        ).order_by(
+            Fine.label.asc()
+        ).limit(
+            page
+        )
+
+    @staticmethod
+    def get_fines_limit_from_list(fines: list, page: int) -> object:
+        return fines.order_by(
+            Fine.created_date.asc()
+        ).limit(
+            page
+        )
+
+    @staticmethod
+    def get_fine_by_label_from_list(fines: list, label: str) -> object:
+        return fines.filter(
+            Fine.label.like('%'+label+'%')
+        )
+
+    @staticmethod
+    def get_fine_by_uuid(uuid: uuid) -> object:
+        return db.session.query(Fine).filter_by(
+            uuid=uuid
+        ).first()
+
+    @staticmethod
+    def get_all_fines_by_team(team_uuid: uuid) -> object:
+        return db.session.query(
+            Fine
+        ).filter(
+            Fine.team_uuid == team_uuid
+        )
+
+    @staticmethod
+    def get_total_fines_by_team(team_uuid: uuid) -> object:
+        return db.session.query(Fine).filter_by(
+            team_uuid=team_uuid
+        ).count()
+
+    @staticmethod
+    def delete_fine(fine: object) -> None:
+        db.session.delete(fine)
+        db.session.commit()

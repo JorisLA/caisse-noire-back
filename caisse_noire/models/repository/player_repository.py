@@ -34,7 +34,7 @@ class PlayerModelRepository(object):
         if not payload['banker']:
             raise AuthorizationError(error_code='player_unauthorized')
 
-        player = self.get_player_by_uuid(player_uuid=payload['player_uuid'])
+        player = Player.get_player_by_uuid(player_uuid=payload['player_uuid'])
 
         if not player:
             raise EntityNotFound(error_code='player_not_found')
@@ -42,7 +42,7 @@ class PlayerModelRepository(object):
         if not payload['fine_uuid']:
             raise ModelCreationError(error_code='missing_parameter')
 
-        fine = self.get_fine_by_uuid(fine_uuid=payload['fine_uuid'])
+        fine = Fine.get_fine_by_uuid(uuid=payload['fine_uuid'])
 
         if not fine:
             raise EntityNotFound(error_code='fine_not_found')
@@ -53,18 +53,6 @@ class PlayerModelRepository(object):
         db.session.commit()
 
         return player.to_dict()
-
-    def get_player_by_uuid(
-        self,
-        player_uuid,
-    ):
-        return db.session.query(Player).filter_by(uuid=player_uuid).first()
-
-    def get_player_by_email(
-        self,
-        player_email,
-    ):
-        return db.session.query(Player).filter_by(email=player_email).first()
 
     def signup_player(
         self,
@@ -145,7 +133,7 @@ class PlayerModelRepository(object):
         ):
             raise ModelCreationError(error_code='missing_parameter')
 
-        player = self.get_player_by_email(player_email=email)
+        player = Player.get_player_by_email(player_email=email)
 
         if not player:
             raise EntityNotFound(error_code='player_not_found')
@@ -351,7 +339,7 @@ class PlayerModelRepository(object):
     ) -> collections:
         result = []
 
-        player = self.get_player_by_uuid(player_uuid=player_uuid)
+        player = Player.get_player_by_uuid(player_uuid=player_uuid)
 
         if not player:
             raise EntityNotFound(error_code='player_not_found')
@@ -377,7 +365,7 @@ class PlayerModelRepository(object):
         if not banker:
             raise AuthorizationError(error_code='player_unauthorized')
 
-        player = self.get_player_by_uuid(player_uuid=player_uuid)
+        player = Player.get_player_by_uuid(player_uuid=player_uuid)
 
         if not player:
             raise EntityNotFound(error_code='player_not_found')

@@ -53,21 +53,3 @@ def db_session(db, app):
         clean_db()
         yield db.session
         db.session.rollback()
-
-
-@pytest.fixture(scope="function")
-def banker(db_session):
-    user = users.test_admin()
-    db_session.add(user)
-    db_session.commit()
-    return user
-
-# @pytest.fixture(scope='module')
-# def new_fine():
-#     fine = Fine(
-#         uuid=str(uuid.uuid4()),
-#         label='fine name',
-#         cost=5,
-#         team_uuid=str(uuid.uuid4()),
-#     )
-#     return fine
